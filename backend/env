@@ -1,0 +1,6 @@
+MONGO_URI=mongodb+srv://logan2246t:tSDIKvQe7UoMFe21@cluster0.yuvz255.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+PORT=3001
+JWT_SECRET=h893hyfji
+NODE_ENV=production
+//FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=https://velocare.vercel.app
