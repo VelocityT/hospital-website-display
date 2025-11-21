@@ -1,0 +1,431 @@
+import Bill from "../models/bill.js";
+import Hospital from "../models/hospital.js";
+import Ipd from "../models/ipd.js";
+import Opd from "../models/opd.js";
+import StaffPayment from "../models/staffPayment.js";
+import pathologyTestReport from "../models/pathologyTestReport.js";
+import User from "../models/user.js";
+import { generateCustomId } from "../utils/generateCustomId.js";
+import { addOnlyDateStage, hashPassword } from "../utils/helper.js";
+import { getUserIncome } from "../services/incomeService.js";
+
+export const registerOrUpdateUser = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const photo = req.file;
+    const userData = req.body;
+
+    if (userData.edit === "true" && userData?._id) {
+      const { _id, edit, password, ...rest } = userData;
+
+      const updatedUser = await User.findOneAndUpdate(
+        { _id, hospital },
+        { ...rest },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found for update",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "User updated successfully",
+      });
+    }
+
+    const staffId = await generateCustomId(hospital, "staff");
+    const newUser = await User.create({
+      staffId,
+      ...userData,
+      hospital,
+      password: await hashPassword(userData.password),
+      ...(photo && { profilePhoto: `/uploads/${photo.filename}` }),
+    });
+    if (newUser.role === "admin") {
+      await Hospital.findByIdAndUpdate(hospital, {
+        $push: { admins: newUser._id },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern)[0];
+      const fieldLabels = {
+        email: "Email",
+        phone: "Phone Number",
+        panNumber: "PAN Number",
+        aadharNumber: "Aadhar Number",
+      };
+
+      return res.status(400).json({
+        success: false,
+        message: `${
+          fieldLabels[duplicateField] || duplicateField
+        } already exists`,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+export const getUsers = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const userType = req.query.userType;
+    const { search = "", page = 1, limit = 20 } = req.query;
+
+    const query = { hospital };
+    if (userType) {
+      query.role = userType;
+    }
+    query.$or = [
+      { fullName: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { phone: { $regex: search, $options: "i" } },
+    ];
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select("-password")
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      User.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: users,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+export const getAllStaff = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const {
+      search = "",
+      role = "",
+      gender = "",
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    const query = { hospital };
+    if (role) {
+      query.role = role;
+    }
+    if (gender) {
+      query.gender = gender;
+    }
+    query.$or = [
+      { staffId: { $regex: search, $options: "i" } },
+      { fullName: { $regex: search, $options: "i" } },
+    ];
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [response, total] = await Promise.all([
+      User.find(query)
+        .select("fullName role staffId gender department")
+        .skip(skip)
+        .limit(parseInt(limit)),
+      User.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: response,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const { hospital, role, _id: authorityId } = req.authority;
+    const { id } = req.params;
+
+    if (!id || id.length !== 24) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    let user;
+    if (role === "superAdmin") {
+      user = await User.findOne({ _id: id }).select("-password");
+    } else {
+      user = await User.findOne({ _id: id, hospital }).select("-password");
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const payments = await StaffPayment.find({
+      staff: user?._id,
+      paymentType: { $ne: "Doctor Commission" },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "User data fetched successfully",
+      data: {
+        user,
+        payments,
+      },
+    });
+  } catch (error) {;
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching user",
+    });
+  }
+};
+
+export const getStaffForAssign = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const { staffType } = req.query;
+
+    if (!staffType) {
+      return res.status(400).json({
+        success: false,
+        message: "Staff type is required (e.g., doctor, nurse)",
+      });
+    }
+
+    const staff = await User.find({ hospital, role: staffType }).select(
+      "fullName ipdCharge opdCharge"
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `${
+        staffType.charAt(0).toUpperCase() + staffType.slice(1)
+      }s fetched successfully`,
+      data: staff,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+
+export const getUserPayments = async (req, res) => {
+  try {
+    const { hospital, role, _id: authorityId } = req.authority;
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const user = await User.findOne({
+      _id: id,
+      hospital,
+    }).select(
+      "fullName role staffId profilePhoto phone dateOfJoining  ipdCharge opdCharge ipdCommission opdCommission"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in this hospital",
+      });
+    }
+
+    const payments = await StaffPayment.find({
+      staff: user?._id,
+      paymentType: { $ne: "Doctor Commission" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User data fetched successfully",
+      data: { user, payments },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching user",
+    });
+  }
+};
+
+export const createStaffPayment = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const {
+      paymentType,
+      amount,
+      paymentDate,
+      notes,
+      staff,
+      salaryMonth,
+      month,
+      role,
+    } = req.body;
+
+    if (!staff || !paymentType || !amount || !paymentDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    const staffDoc = await User.findOne({ _id: staff, hospital }).select(
+      "fullName role staffId hospital"
+    );
+
+    if (!staffDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Staff not found in this hospital",
+      });
+    }
+
+    const payment = new StaffPayment({
+      staff,
+      hospital,
+      paymentType,
+      amount,
+      paymentDate,
+      notes,
+      role,
+      salaryMonth: paymentType === "Monthly Salary" ? salaryMonth : null,
+      month: paymentType === "Monthly Salary" ? month : null,
+    });
+
+    await payment.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Payment added successfully",
+      data: payment,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error while creating payment",
+    });
+  }
+};
+export const updateStaffPayment = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const { id } = req.params;
+    const {
+      paymentType,
+      amount,
+      paymentDate,
+      notes,
+      salaryMonth,
+      month,
+      role,
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment ID is required",
+      });
+    }
+
+    const payment = await StaffPayment.findOne({ _id: id, hospital });
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found in this hospital",
+      });
+    }
+
+    payment.paymentType = paymentType || payment.paymentType;
+    payment.amount = amount ?? payment.amount;
+    payment.paymentDate = paymentDate || payment.paymentDate;
+    payment.notes = notes ?? payment.notes;
+    payment.role = role || payment.role;
+    payment.salaryMonth = paymentType === "Monthly Salary" ? salaryMonth : null;
+    payment.month = paymentType === "Monthly Salary" ? month : null;
+
+    await payment.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment updated successfully",
+      data: payment,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error while updating payment",
+    });
+  }
+};
+export const getIncomeOverview = async (req, res) => {
+  try {
+    const { role, id, startDate, endDate } = req.query;
+    const {_id,hospital} = req.authority
+
+    const income = await getUserIncome({
+      role,
+      hospital,
+      authorityId:_id,
+      id,
+      startDate,
+      endDate,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: income,
+    });
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch income overview",
+    });
+  }
+};
