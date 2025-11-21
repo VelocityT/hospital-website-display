@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap");
+
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --line-start: white;
+  --line-end: #3b82f6;
+}
+
+.dark {
+  --line-start: black;
+  --line-end: #3b82f6;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: "Nunito", "Ubuntu Mono", sans-serif;
+  @apply bg-blue-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+}
+
+*::-webkit-scrollbar {
+  background-color: transparent;
+  width: 3px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #2b7fff;
+  /* background-color: #53eafd; */
+  border-radius: 30px;
+  width: 3px;
+}
+
+/* @keyframes blob {
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+ */
