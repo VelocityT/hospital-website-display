@@ -1,0 +1,34 @@
+/* Override AntD styles */
+.registration-container {
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 20px 0;
+  }
+  
+  .step-content {
+    min-height: 300px;
+    padding: 16px 0;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .ant-steps-horizontal:not(.ant-steps-label-vertical) .ant-steps-item {
+      padding-left: 8px !important;
+    }
+    
+    .ant-form-item-label {
+      text-align: left !important;
+    }
+  }
+  
+  /* Print styles */
+  @media print {
+    .registration-container {
+      padding: 0;
+      background: white;
+    }
+    
+    .no-print {
+      display: none !important;
+    }
+  }

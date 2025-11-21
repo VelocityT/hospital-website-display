@@ -1,0 +1,7 @@
+.bed-card {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  &.clean { background: #f6ffed; }
+  &.needs-cleaning { background: #fffbe6; }
+}

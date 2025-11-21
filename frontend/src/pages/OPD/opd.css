@@ -1,0 +1,27 @@
+.opd-container {
+    padding: 24px;
+    background: #fff;
+    min-height: calc(100vh - 64px);
+  }
+  
+  .patient-queue {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+  }
+  
+  .queue-controls {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .ant-form-item {
+      margin-bottom: 16px !important;
+    }
+    
+    .ant-col {
+      width: 100%;
+    }
+  }

@@ -1,0 +1,79 @@
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-in-left {
+  opacity: 0;
+  animation: fadeInLeft 1s ease-out forwards;
+}
+.fade-in-left {
+  opacity: 0;
+  transform: translateX(-50px);
+  animation-fill-mode: forwards;
+}
+
+.fade-delay-1 {
+  animation-delay: 0.3s;
+}
+
+.fade-delay-2 {
+  animation-delay: 0.6s;
+}
+
+.light-login .ant-input,
+.light-login .ant-input-password input,
+.light-login .ant-input-affix-wrapper {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #d9d9d9 !important;
+  box-shadow: none !important;
+}
+
+.light-login .ant-input::placeholder,
+.light-login .ant-input-password input::placeholder {
+  color: #6b7280 !important;
+}
+
+.light-login .ant-input:focus,
+.light-login .ant-input-focused,
+.light-login .ant-input-password input:focus,
+.light-login .ant-input-affix-wrapper-focused {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #3b82f6 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.light-login .ant-form-item-label > label {
+  color: #000000 !important;
+}
+
+.light-login .ant-btn-primary {
+  background-color: #1677ff !important;
+  border-color: #1677ff !important;
+  color: #ffffff !important;
+}
+
+.light-login .ant-input-password-icon {
+  color: #000000 !important;
+}
