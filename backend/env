@@ -1,4 +1,4 @@
-MONGO_URI=mongodb+srv://logan2246t:tSDIKvQe7UoMFe21@cluster0.yuvz255.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGO_URI=mongodb+srv://logan2246t_db_user:orPijJOQPCROqQ0F@cluster0.jlslbzb.mongodb.net/hsp_data?appName=Cluster0
 PORT=3001
 JWT_SECRET=h893hyfji
 NODE_ENV=production
