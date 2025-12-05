@@ -102,7 +102,7 @@ const LoginPage = () => {
 
   const superAdminRole = {
     key: "superAdmin",
-    icon: <MdSupervisedUserCircle />
+    icon: <MdSupervisedUserCircle />,
     label: "Super Admin",
   };
   const finalRoles = isAdminDomain ? [superAdminRole] : roles;
