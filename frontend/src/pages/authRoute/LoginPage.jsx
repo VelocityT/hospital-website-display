@@ -19,11 +19,6 @@ import { setHospital } from "../../redux/hospitalSlice";
 const { Title } = Typography;
 
 const roles = [
-  // {
-  //   key: "superAdmin",
-  //   icon: <MdSupervisedUserCircle />,
-  //   label: "Super Admin",
-  // },
   {
     key: "admin",
     icon: <UserOutlined />,
@@ -103,6 +98,15 @@ const LoginPage = () => {
     }
   };
 
+  const isAdminDomain = window.location.hostname.includes("admin.");
+
+  const superAdminRole = {
+    key: "superAdmin",
+    icon: <MdSupervisedUserCircle />
+    label: "Super Admin",
+  };
+  const finalRoles = isAdminDomain ? [superAdminRole] : roles;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 transition-colors relative">
       <div
@@ -117,7 +121,11 @@ const LoginPage = () => {
         variant="borderless"
       >
         <div className="flex flex-col-reverse md:flex-row w-full">
-          <div className="w-full md:w-1/2 lg:w-3/5 p-6 relative flex flex-col items-center justify-start text-black min-h-[300px]">
+          <div
+            className={`w-full md:w-1/2 lg:w-3/5 p-6 relative flex flex-col items-center justify-start text-black ${
+              isAdminDomain ? "min-h-[510px]" : "min-h-[300px]"
+            }`}
+          >
             <div className="z-10 text-center">
               <h1 className="text-3xl font-bold fade-in-left fade-delay-1">
                 Velo Care
@@ -145,7 +153,7 @@ const LoginPage = () => {
               <Form layout="vertical" onFinish={onFinish} form={form}>
                 <div className="mb-2">
                   <div className="flex flex-wrap justify-center md:gap-2">
-                    {roles.map((role) => (
+                    {finalRoles.map((role) => (
                       <div
                         key={role.key}
                         className="flex flex-col items-center"
