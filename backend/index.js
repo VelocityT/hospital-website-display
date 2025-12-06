@@ -32,7 +32,7 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:3000",
   "https://www.hp.velocare.in",
-  "https://hp.velocare.in", // 🔁 Replace this with your actual Vercel domain
+  "https://hp.velocare.in",
   "https://superadmin.velocare.in",
 ];
 
