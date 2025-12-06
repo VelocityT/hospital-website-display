@@ -39,11 +39,20 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow server-to-server and mobile apps (no origin)
+      if (!origin) return callback(null, true);
+
+      // Normalize origin (remove trailing slash)
+      const cleanOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(cleanOrigin)) {
         return callback(null, true);
+      } else {
+        console.log("❌ CORS Blocked Origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
       }
-      callback(new Error("Not allowed by CORS"));
     },
+    credentials: true,
   })
 );
 
