@@ -33,6 +33,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://www.hp.velocare.in",
   "https://hp.velocare.in", // 🔁 Replace this with your actual Vercel domain
+  "https://superadmin.velocare.in",
 ];
 
 app.use(
