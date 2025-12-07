@@ -845,7 +845,7 @@ export const impersonateUser = async (req, res) => {
     const { _id } = req.authority;
     const { userId } = req.params;
 
-    const superAdmin = User.findById(_id);
+    const superAdmin =await User.findById(_id).lean();
     if (superAdmin.role !== "superAdmin") {
       return res.status(401).json({
         success: false,
