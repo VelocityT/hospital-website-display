@@ -81,7 +81,7 @@ const CreateOrUpdateHospital = ({ edit }) => {
         setPreviewImage(null);
         navigate("/hospitals");
       } else {
-        toast.error(result.message || "Something went wrong");
+        toast.error(result || "Something went wrong");
       }
     } catch (err) {
       toast.error("Server error. Try again later.");
