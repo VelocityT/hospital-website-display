@@ -29,6 +29,7 @@ function AppContent() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const user = useSelector((state) => state.user);
+  const modules = useSelector((state) => state.hospital?.modules);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -63,6 +64,21 @@ function AppContent() {
   if (isLoginPage) return <LoginPage />;
 
   const accessibleRoutes = roleRoutes[user?.role] || [];
+  let allowedRoutes;
+  if (user?.role !== "superAdmin") {
+    allowedRoutes = accessibleRoutes?.filter((route) => {
+      const routePath = route?.path?.toLowerCase();
+      const matchedModule = Object?.keys(modules)?.find((moduleName) =>
+        routePath?.includes(moduleName)
+      );
+      if (matchedModule && modules[matchedModule] === false) {
+        return false;
+      }
+      return true;
+    });
+  } else {
+    allowedRoutes = accessibleRoutes;
+  }
 
   if (!user?._id) {
     return <Navigate to="/login" replace />;
@@ -98,7 +114,7 @@ function AppContent() {
         <Navbar />
         <Content className="p-6 overflow-y-auto print:overflow-visible print:p-0">
           <Routes>
-            {accessibleRoutes.map(({ path, element }) => (
+            {allowedRoutes.map(({ path, element }) => (
               <Route
                 key={path}
                 path={path}
