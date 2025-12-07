@@ -104,7 +104,7 @@ function StaffRegistrationForm({ edit = false }) {
         form.resetFields();
         setPreviewImage(null);
       } else {
-        toast.error(response.message || "Operation failed");
+        toast.error(response || "Operation failed");
       }
     } catch (error) {
       toast.error(error.message || "Server error");
