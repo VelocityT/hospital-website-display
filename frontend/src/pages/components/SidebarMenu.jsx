@@ -10,12 +10,14 @@ import {
   RestOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { FaChartLine, FaHospital } from "react-icons/fa";
 
 const { Sider } = Layout;
 
 const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
+  const hospital = useSelector((state) => state?.hospital);
   const baseMenu = [
     {
       key: "dashboard",
@@ -32,21 +34,33 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
   const roleMenus = {
     admin: [
       ...baseMenu,
-      {
-        key: "ipd-list",
-        icon: <ProfileOutlined size={"1.2rem"} />,
-        label: <Link to="/ipd-list">IPD List</Link>,
-      },
-      {
-        key: "opd-list",
-        icon: <MedicineBoxOutlined size={"1.2rem"} />,
-        label: <Link to="/opd-list">OPD List</Link>,
-      },
-      {
-        key: "billing",
-        icon: <MdRequestQuote size={"1.2rem"} />,
-        label: <Link to="/billing/patientBilling">Billing</Link>,
-      },
+      ...(hospital?.modules?.ipd
+        ? [
+            {
+              key: "ipd-list",
+              icon: <ProfileOutlined size={"1.2rem"} />,
+              label: <Link to="/ipd-list">IPD List</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.opd
+        ? [
+            {
+              key: "opd-list",
+              icon: <MedicineBoxOutlined size={"1.2rem"} />,
+              label: <Link to="/opd-list">OPD List</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.billing
+        ? [
+            {
+              key: "billing",
+              icon: <MdRequestQuote size={"1.2rem"} />,
+              label: <Link to="/billing/patientBilling">Billing</Link>,
+            },
+          ]
+        : []),
       {
         key: "registration",
         icon: <UserAddOutlined size={"1.2rem"} />,
@@ -67,46 +81,53 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
         icon: <TeamOutlined size={"1.2rem"} />,
         label: <Link to="/staff">Staff Management</Link>,
       },
-      {
-        key: "pharmacy-group",
-        label: "Pharmacy",
-        icon: <MedicineBoxOutlined size={"1.2rem"} />,
-        children: [
-          {
-            key: "pharmacy",
-            label: <Link to="/pharmacy">Medicines</Link>,
-            icon: <MedicineBoxOutlined size={"1.2rem"} />,
-          },
-          {
-            key: "pharmacySales",
-            label: <Link to="/pharmacy/sales">Sales</Link>,
-            icon: <FaChartLine size={"1.2rem"} />,
-          },
-        ],
-      },
-
-      {
-        key: "pathology-group",
-        label: "Pathology",
-        icon: <TbReportMedical size={"1.2rem"} />,
-        children: [
-          {
-            key: "pathology",
-            label: <Link to="/pathology">Tests</Link>,
-            icon: <MedicineBoxOutlined size={"1.2rem"} />,
-          },
-          {
-            key: "pathologySales",
-            label: <Link to="/pathology/sales">Sales</Link>,
-            icon: <FaChartLine size={"1.2rem"} />,
-          },
-          {
-            key: "pathologyTestReports",
-            label: <Link to="/pathology/TestReports">Reports</Link>,
-            icon: <TbReportMedical size={"1.2rem"} />,
-          },
-        ],
-      },
+      ...(hospital?.modules?.pharmacy
+        ? [
+            {
+              key: "pharmacy-group",
+              label: "Pharmacy",
+              icon: <MedicineBoxOutlined size={"1.2rem"} />,
+              children: [
+                {
+                  key: "pharmacy",
+                  label: <Link to="/pharmacy">Medicines</Link>,
+                  icon: <MedicineBoxOutlined size={"1.2rem"} />,
+                },
+                {
+                  key: "pharmacySales",
+                  label: <Link to="/pharmacy/sales">Sales</Link>,
+                  icon: <FaChartLine size={"1.2rem"} />,
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.pathology
+        ? [
+            {
+              key: "pathology-group",
+              label: "Pathology",
+              icon: <TbReportMedical size={"1.2rem"} />,
+              children: [
+                {
+                  key: "pathology",
+                  label: <Link to="/pathology">Tests</Link>,
+                  icon: <MedicineBoxOutlined size={"1.2rem"} />,
+                },
+                {
+                  key: "pathologySales",
+                  label: <Link to="/pathology/sales">Sales</Link>,
+                  icon: <FaChartLine size={"1.2rem"} />,
+                },
+                {
+                  key: "pathologyTestReports",
+                  label: <Link to="/pathology/TestReports">Reports</Link>,
+                  icon: <TbReportMedical size={"1.2rem"} />,
+                },
+              ],
+            },
+          ]
+        : []),
       {
         key: "staffPayments",
         icon: <MdRequestQuote size={"1.2rem"} />,
@@ -116,16 +137,24 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
 
     doctor: [
       ...baseMenu,
-      {
-        key: "ipd-list",
-        icon: <ProfileOutlined size={"1.2rem"} />,
-        label: <Link to="/ipd-list">IPD List</Link>,
-      },
-      {
-        key: "opd-list",
-        icon: <MedicineBoxOutlined size={"1.2rem"} />,
-        label: <Link to="/opd-list">OPD List</Link>,
-      },
+      ...(hospital?.modules?.ipd
+        ? [
+            {
+              key: "ipd-list",
+              icon: <ProfileOutlined size={"1.2rem"} />,
+              label: <Link to="/ipd-list">IPD List</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.opd
+        ? [
+            {
+              key: "opd-list",
+              icon: <MedicineBoxOutlined size={"1.2rem"} />,
+              label: <Link to="/opd-list">OPD List</Link>,
+            },
+          ]
+        : []),
     ],
 
     nurse: [...baseMenu],
@@ -137,11 +166,15 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
         icon: <FaChartLine size={"1.2rem"} />,
         label: <Link to="/pharmacy/sales">Sales</Link>,
       },
-      {
-        key: "billing",
-        icon: <MdRequestQuote size={"1.2rem"} />,
-        label: <Link to="/billing/patientBilling">Billing</Link>,
-      },
+      ...(hospital?.modules?.billing
+        ? [
+            {
+              key: "billing",
+              icon: <MdRequestQuote size={"1.2rem"} />,
+              label: <Link to="/billing/patientBilling">Billing</Link>,
+            },
+          ]
+        : []),
       {
         key: "pharmacy",
         icon: <MedicineBoxOutlined size={"1.2rem"} />,
@@ -156,21 +189,33 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
         icon: <UserAddOutlined size={"1.2rem"} />,
         label: <Link to="/registration">Patient Registration</Link>,
       },
-      {
-        key: "ipd-list",
-        icon: <ProfileOutlined size={"1.2rem"} />,
-        label: <Link to="/ipd-list">IPD List</Link>,
-      },
-      {
-        key: "opd-list",
-        icon: <MedicineBoxOutlined size={"1.2rem"} />,
-        label: <Link to="/opd-list">OPD List</Link>,
-      },
-      {
-        key: "billing",
-        icon: <MdRequestQuote size={"1.2rem"} />,
-        label: <Link to="/billing/patientBilling">Billing</Link>,
-      },
+      ...(hospital?.modules?.ipd
+        ? [
+            {
+              key: "ipd-list",
+              icon: <ProfileOutlined size={"1.2rem"} />,
+              label: <Link to="/ipd-list">IPD List</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.opd
+        ? [
+            {
+              key: "opd-list",
+              icon: <MedicineBoxOutlined size={"1.2rem"} />,
+              label: <Link to="/opd-list">OPD List</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.billing
+        ? [
+            {
+              key: "billing",
+              icon: <MdRequestQuote size={"1.2rem"} />,
+              label: <Link to="/billing/patientBilling">Billing</Link>,
+            },
+          ]
+        : []),
     ],
     pathologist: [
       {
@@ -183,11 +228,15 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
         icon: <FaChartLine size={"1.2rem"} />,
         label: <Link to="/pathology/sales">Sales</Link>,
       },
-      {
-        key: "billing",
-        icon: <MdRequestQuote size={"1.2rem"} />,
-        label: <Link to="/billing/patientBilling">Billing</Link>,
-      },
+      ...(hospital?.modules?.billing
+        ? [
+            {
+              key: "billing",
+              icon: <MdRequestQuote size={"1.2rem"} />,
+              label: <Link to="/billing/patientBilling">Billing</Link>,
+            },
+          ]
+        : []),
       {
         key: "patient-list",
         icon: <TeamOutlined size={"1.2rem"} />,
