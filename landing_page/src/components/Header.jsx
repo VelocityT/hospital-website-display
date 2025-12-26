@@ -61,7 +61,7 @@ const Header = () => {
       <div className="px-6 py-2 flex items-center justify-between">
         <div
           className="flex items-center gap-3 cursor-pointer"
-          onClick={() => navigate("/")}
+          onClick={() => (window.location.href = "/")}
         >
           <img
             src="/icon.png"

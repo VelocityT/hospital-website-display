@@ -134,7 +134,7 @@ const Footer = () => {
               viewport={{ once: false }}
               className="flex items-center gap-3"
             >
-              <Phone className="text-blue-500" size={18} /> +91 00000 00000
+              <Phone className="text-blue-500" size={18} /> +91 7880984813, 8416954767
             </motion.li>
             <motion.li
               initial={{ opacity: 0, x: -20 }}
@@ -143,7 +143,7 @@ const Footer = () => {
               viewport={{ once: false }}
               className="flex items-center gap-3"
             >
-              <MapPin className="text-blue-500" size={18} /> Lacknow, Uttar
+              <MapPin className="text-blue-500" size={18} /> Lucknow, Uttar
               Pradesh
             </motion.li>
           </ul>
