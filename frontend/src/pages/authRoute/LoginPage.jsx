@@ -127,9 +127,11 @@ const LoginPage = () => {
             }`}
           >
             <div className="z-10 text-center">
-              <h1 className="text-3xl font-bold fade-in-left fade-delay-1">
-                Velo Care
-              </h1>
+              <img
+                src="/iconForLogin.png" // put your image inside public/logo.png
+                alt="Velo Care Logo"
+                className="mx-auto w-40 h-30 fade-in-left fade-delay-1"
+              />
               <p className="text-lg fade-in-left fade-delay-2">
                 Your Health Our Priority
               </p>
