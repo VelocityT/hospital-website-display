@@ -9,10 +9,11 @@ import {
   MedicineBoxOutlined,
   RestOutlined,
   UserOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { FaChartLine, FaHospital } from "react-icons/fa";
+import { FaChartLine, FaHospital, FaGlasses, FaUserMd } from "react-icons/fa";
 
 const { Sider } = Layout;
 
@@ -128,6 +129,52 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
             },
           ]
         : []),
+      ...(hospital?.modules?.ophthalmology
+        ? [
+            {
+              key: "ophthalmology-group",
+              label: "Ophthalmology",
+              icon: <EyeOutlined size={"1.2rem"} />,
+              children: [
+                {
+                  key: "eye-queue",
+                  label: <Link to="/eye/queue">Eye Queue</Link>,
+                  icon: <EyeOutlined size={"1.2rem"} />,
+                },
+                ...(hospital?.modules?.ot
+                  ? [
+                      {
+                        key: "surgery-board",
+                        label: <Link to="/eye/surgery-board">Surgery Board</Link>,
+                        icon: <FaUserMd size={"1.2rem"} />,
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.opticalShop
+        ? [
+            {
+              key: "optical-group",
+              label: "Optical Shop",
+              icon: <FaGlasses size={"1.2rem"} />,
+              children: [
+                {
+                  key: "optical-orders",
+                  label: <Link to="/optical/orders">Orders</Link>,
+                  icon: <ProfileOutlined size={"1.2rem"} />,
+                },
+                {
+                  key: "optical-inventory",
+                  label: <Link to="/optical/inventory">Inventory</Link>,
+                  icon: <MedicineBoxOutlined size={"1.2rem"} />,
+                },
+              ],
+            },
+          ]
+        : []),
       {
         key: "staffPayments",
         icon: <MdRequestQuote size={"1.2rem"} />,
@@ -153,6 +200,24 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
               icon: <MedicineBoxOutlined size={"1.2rem"} />,
               label: <Link to="/opd-list">OPD List</Link>,
             },
+          ]
+        : []),
+      ...(hospital?.modules?.ophthalmology
+        ? [
+            {
+              key: "eye-queue",
+              icon: <EyeOutlined size={"1.2rem"} />,
+              label: <Link to="/eye/queue">Eye Queue</Link>,
+            },
+            ...(hospital?.modules?.ot
+              ? [
+                  {
+                    key: "surgery-board",
+                    icon: <FaUserMd size={"1.2rem"} />,
+                    label: <Link to="/eye/surgery-board">Surgery Board</Link>,
+                  },
+                ]
+              : []),
           ]
         : []),
     ],

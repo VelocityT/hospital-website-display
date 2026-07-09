@@ -33,6 +33,13 @@ import PathologySales from "../pages/pathology/PathologySales";
 import PharmacySales from "../pages/pharmacy/PharmacySales";
 import StaffPayments from "../pages/staff/StaffPayments";
 import StaffListForPayment from "../pages/staff/StaffListForPayment";
+import EyeQueue from "../pages/ophthalmology/EyeQueue";
+import EyeWorkup from "../pages/ophthalmology/EyeWorkup";
+import DoctorEyePanel from "../pages/ophthalmology/DoctorEyePanel";
+import SurgeryBoard from "../pages/ophthalmology/SurgeryBoard";
+import OpticalInventory from "../pages/ophthalmology/OpticalInventory";
+import OpticalOrders from "../pages/ophthalmology/OpticalOrders";
+import CreateOpticalOrder from "../pages/ophthalmology/CreateOpticalOrder";
 
 const commonRoutes = [
   { path: "/dashboard", element: <Dashboard /> },
@@ -115,6 +122,15 @@ const adminRoutes = [
     path: "/pathology/edit-report/:id",
     element: <CreateUpdatePatholodyTestReport />,
   },
+  // ---------- Ophthalmology ----------
+  { path: "/eye/queue", element: <EyeQueue /> },
+  { path: "/eye/workup", element: <EyeWorkup /> },
+  { path: "/eye/doctor-panel", element: <DoctorEyePanel /> },
+  { path: "/eye/surgery-board", element: <SurgeryBoard /> },
+  // ---------- Optical Shop ----------
+  { path: "/optical/inventory", element: <OpticalInventory /> },
+  { path: "/optical/orders", element: <OpticalOrders /> },
+  { path: "/optical/order/new", element: <CreateOpticalOrder /> },
 ];
 export const roleRoutes = {
   admin: adminRoutes,
@@ -151,6 +167,11 @@ export const roleRoutes = {
     { path: "/patients", element: <PatientList /> },
     { path: "/opd-list", element: <OPDIPDList type="opd" /> },
     { path: "/ipd-list", element: <OPDIPDList type="ipd" /> },
+    // ---------- Ophthalmology ----------
+    { path: "/eye/queue", element: <EyeQueue /> },
+    { path: "/eye/workup", element: <EyeWorkup /> },
+    { path: "/eye/doctor-panel", element: <DoctorEyePanel /> },
+    { path: "/eye/surgery-board", element: <SurgeryBoard /> },
   ],
 
   nurse: [

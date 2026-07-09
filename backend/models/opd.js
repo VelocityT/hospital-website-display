@@ -21,7 +21,7 @@ const opdVisitSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Scheduled", "Completed"],
+    enum: ["Scheduled", "Workup Done", "With Doctor", "Completed"],
     default: "Scheduled",
   },
   payment: {

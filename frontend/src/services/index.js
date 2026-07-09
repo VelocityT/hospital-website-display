@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  // baseURL: "http://localhost:3001/api",
-  baseURL: "https://hospital-erp-9w6z.onrender.com/api",
+  baseURL: "http://localhost:3001/api",
+  // baseURL: "https://hospital-erp-9w6z.onrender.com/api",
   headers: { "Content-Type": "application/json" },
 });
 
