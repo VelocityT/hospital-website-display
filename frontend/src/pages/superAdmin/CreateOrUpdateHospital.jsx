@@ -5,7 +5,21 @@ import { toast } from "react-hot-toast";
 import { createOrUpdateHospitalApi } from "../../services/apis";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const moduleList = ["pharmacy", "ipd", "opd", "pathology", "billing"];
+const moduleList = [
+  "pharmacy",
+  "ipd",
+  "opd",
+  "pathology",
+  "billing",
+  "ophthalmology",
+  "opticalShop",
+  "ot",
+];
+
+const moduleLabels = {
+  opticalShop: "Optical Shop",
+  ot: "OT",
+};
 
 const CreateOrUpdateHospital = ({ edit }) => {
   const [form] = Form.useForm();
@@ -246,7 +260,7 @@ const CreateOrUpdateHospital = ({ edit }) => {
                     <Switch />
                   </Form.Item>
                   <span className="ml-3 capitalize text-base text-gray-700 dark:text-gray-300">
-                    {mod}
+                    {moduleLabels[mod] || mod}
                   </span>
                 </Col>
               ))}

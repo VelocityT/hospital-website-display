@@ -5,6 +5,9 @@ export const ROLES = {
   nurse: "nurse",
   receptionist: "receptionist",
   pharmacist: "pharmacist",
+  pathologist: "pathologist",
+  optometrist: "optometrist",
+  optician: "optician",
 };
 
 export const secondOrderAccess = ["admin", "doctor"];

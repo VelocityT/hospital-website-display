@@ -21,6 +21,9 @@ const hospitalSchema = new mongoose.Schema(
       pathology: { type: Boolean, default: false },
       billing: { type: Boolean, default: false },
       inventory: { type: Boolean, default: false },
+      ophthalmology: { type: Boolean, default: false },
+      opticalShop: { type: Boolean, default: false },
+      ot: { type: Boolean, default: false },
     },
 
     admins: [
@@ -46,6 +49,14 @@ const hospitalSchema = new mongoose.Schema(
       default: 0,
     },
     billCounter: {
+      type: Number,
+      default: 0,
+    },
+    opticalCounter: {
+      type: Number,
+      default: 0,
+    },
+    surgeryCounter: {
       type: Number,
       default: 0,
     },

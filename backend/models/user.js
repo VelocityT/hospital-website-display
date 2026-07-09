@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema(
         "pharmacist",
         "superAdmin",
         "pathologist",
+        "optometrist",
+        "optician",
       ],
       default: "receptionist",
     },

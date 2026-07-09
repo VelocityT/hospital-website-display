@@ -17,6 +17,9 @@ import pharmacyRoutes from "./routes/pharmacy.route.js";
 import payRoutes from "./routes/pay.route.js";
 import pathologyRoutes from "./routes/pathology.route.js";
 import prescriptionRoute from "./routes/prescription.route.js";
+import eyeRoutes from "./routes/eye.route.js";
+import opticalRoutes from "./routes/optical.route.js";
+import eyeSurgeryRoutes from "./routes/eyeSurgery.route.js";
 
 dotenv.config();
 connectDB();
@@ -31,6 +34,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "http://superadmin.localhost:3000",
   "https://www.hp.velocare.in",
   "https://hp.velocare.in",
   "https://superadmin.velocare.in",
@@ -98,6 +102,9 @@ app.use("/api/pharmacy", pharmacyRoutes);
 app.use("/api/pay", payRoutes);
 app.use("/api/pathology", pathologyRoutes);
 app.use("/api/prescription", prescriptionRoute);
+app.use("/api/eye", eyeRoutes);
+app.use("/api/optical", opticalRoutes);
+app.use("/api/eye-surgery", eyeSurgeryRoutes);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

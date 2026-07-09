@@ -29,7 +29,6 @@ function AppContent() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const user = useSelector((state) => state.user);
-  const modules = useSelector((state) => state.hospital?.modules);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -63,22 +62,10 @@ function AppContent() {
   const isLoginPage = location.pathname === "/login";
   if (isLoginPage) return <LoginPage />;
 
-  const accessibleRoutes = roleRoutes[user?.role] || [];
-  let allowedRoutes;
-  if (user?.role !== "superAdmin") {
-    allowedRoutes = accessibleRoutes?.filter((route) => {
-      const routePath = route?.path?.toLowerCase();
-      const matchedModule = Object?.keys(modules)?.find((moduleName) =>
-        routePath?.includes(moduleName)
-      );
-      if (matchedModule && modules[matchedModule] === false) {
-        return false;
-      }
-      return true;
-    });
-  } else {
-    allowedRoutes = accessibleRoutes;
-  }
+  // Route access is driven by role. Module visibility is enforced in
+  // SidebarMenu (with safe optional chaining). Note: superAdmin has no
+  // hospital, so `modules` can be undefined — never call Object.keys on it.
+  const allowedRoutes = roleRoutes[user?.role] || [];
 
   if (!user?._id) {
     return <Navigate to="/login" replace />;

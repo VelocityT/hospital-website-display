@@ -619,3 +619,129 @@ export const updateStaffPaymentApi = async (id, payload) => {
     return error.response?.data || error.message;
   }
 };
+
+// ---------------- Ophthalmology / Eye Care ----------------
+export const getEyeQueueApi = async (params = {}) => {
+  try {
+    const res = await API.get("/eye/queue", { params });
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const saveEyeWorkupApi = async (payload) => {
+  try {
+    const res = await API.post("/eye/workup", payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const saveDoctorEyeFindingsApi = async (payload) => {
+  try {
+    const res = await API.post("/eye/doctor-findings", payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getEyeExamApi = async (params = {}) => {
+  try {
+    const res = await API.get("/eye/exam", { params });
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getPatientEyeHistoryApi = async (patientId) => {
+  try {
+    const res = await API.get(`/eye/history/${patientId}`);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+
+// ---------------- Optical Shop ----------------
+export const createOrUpdateOpticalItemApi = async (payload) => {
+  try {
+    const res = await API.post("/optical/item", payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getOpticalItemsApi = async (params = {}) => {
+  try {
+    const res = await API.get("/optical/items", { params });
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const deleteOpticalItemApi = async (id) => {
+  try {
+    const res = await API.delete(`/optical/item/${id}`);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const createOpticalOrderApi = async (payload) => {
+  try {
+    const res = await API.post("/optical/order", payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getOpticalOrdersApi = async (params = {}) => {
+  try {
+    const res = await API.get("/optical/orders", { params });
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const updateOpticalOrderStatusApi = async (id, payload) => {
+  try {
+    const res = await API.put(`/optical/order/${id}/status`, payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+
+// ---------------- Eye Surgery / OT ----------------
+export const createEyeSurgeryApi = async (payload) => {
+  try {
+    const res = await API.post("/eye-surgery", payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const updateEyeSurgeryApi = async (id, payload) => {
+  try {
+    const res = await API.put(`/eye-surgery/${id}`, payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getEyeSurgeriesApi = async (params = {}) => {
+  try {
+    const res = await API.get("/eye-surgery/list", { params });
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
+export const getEyeSurgeryByIdApi = async (id) => {
+  try {
+    const res = await API.get(`/eye-surgery/${id}`);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
