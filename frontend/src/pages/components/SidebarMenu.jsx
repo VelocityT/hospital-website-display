@@ -8,7 +8,6 @@ import {
   ProfileOutlined,
   MedicineBoxOutlined,
   RestOutlined,
-  UserOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
