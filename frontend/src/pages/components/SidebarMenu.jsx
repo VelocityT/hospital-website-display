@@ -280,6 +280,15 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
             },
           ]
         : []),
+      ...(hospital?.modules?.ophthalmology
+        ? [
+            {
+              key: "eye-queue",
+              icon: <EyeOutlined size={"1.2rem"} />,
+              label: <Link to="/eye/queue">Eye Queue</Link>,
+            },
+          ]
+        : []),
     ],
     pathologist: [
       {

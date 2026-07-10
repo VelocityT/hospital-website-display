@@ -209,6 +209,9 @@ export const roleRoutes = {
     { path: "/ipd/add/:patientId", element: <AddOpdIpd add="ipd" /> },
     { path: "/opd/add/:patientId", element: <AddOpdIpd add="opd" /> },
     { path: "/billing/patientBilling", element: <PatientBilling /> },
+    // Receptionist can start the eye workflow (queue + workup)
+    { path: "/eye/queue", element: <EyeQueue /> },
+    { path: "/eye/workup", element: <EyeWorkup /> },
   ],
   pathologist: [
     { path: "/billing/patientBilling", element: <PatientBilling /> },

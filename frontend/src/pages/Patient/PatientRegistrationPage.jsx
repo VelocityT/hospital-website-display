@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Form,
   Input,
@@ -37,6 +38,44 @@ const { Option } = Select;
 function PatientRegistrationPage({ edit }) {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+
+  // Eye-focused hospitals capture symptoms in the Eye Workup step instead,
+  // so hide the generic symptoms block from registration for them.
+  const modules = useSelector((state) => state?.hospital?.modules);
+  const hideSymptoms = !!(
+    modules?.ophthalmology ||
+    modules?.opticalShop ||
+    modules?.ot
+  );
+
+  // Enter moves focus to the next field; on the last field it submits.
+  const handleEnterNavigation = (e) => {
+    if (e.key !== "Enter") return;
+    const el = e.target;
+    const tag = el.tagName;
+    // Let textareas add newlines and buttons trigger their own click.
+    if (tag === "TEXTAREA" || tag === "BUTTON" || el.type === "submit") return;
+    // If an AntD Select dropdown is open, let Enter pick the highlighted option.
+    if (
+      el.getAttribute("role") === "combobox" &&
+      el.getAttribute("aria-expanded") === "true"
+    ) {
+      return;
+    }
+    e.preventDefault();
+    const focusables = Array.from(
+      e.currentTarget.querySelectorAll(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled])'
+      )
+    ).filter((node) => node.offsetParent !== null && node.tabIndex !== -1);
+    const idx = focusables.indexOf(el);
+    if (idx > -1 && idx < focusables.length - 1) {
+      focusables[idx + 1].focus();
+    } else {
+      form.submit();
+    }
+  };
+
   const [patientType, setPatientType] = useState("");
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [symptomType, setSymptomType] = useState([]);
@@ -312,17 +351,19 @@ function PatientRegistrationPage({ edit }) {
         <Col span={24}>
           <IPDForm form={form} editIpdBed={editIpdBed} />
         </Col>
-        <Col span={24}>
-          <SymptomsForm
-            form={form}
-            selectedSymptoms={selectedSymptoms}
-            setSelectedSymptoms={setSelectedSymptoms}
-            symptomType={symptomType}
-            setSymptomType={setSymptomType}
-            symptomDescription={symptomDescription}
-            setSymptomDescription={setSymptomDescription}
-          />
-        </Col>
+        {!hideSymptoms && (
+          <Col span={24}>
+            <SymptomsForm
+              form={form}
+              selectedSymptoms={selectedSymptoms}
+              setSelectedSymptoms={setSelectedSymptoms}
+              symptomType={symptomType}
+              setSymptomType={setSymptomType}
+              symptomDescription={symptomDescription}
+              setSymptomDescription={setSymptomDescription}
+            />
+          </Col>
+        )}
       </>
     );
   } else if (edit === "opd") {
@@ -331,17 +372,19 @@ function PatientRegistrationPage({ edit }) {
         <Col span={24}>
           <OPDForm form={form} />
         </Col>
-        <Col span={24}>
-          <SymptomsForm
-            form={form}
-            selectedSymptoms={selectedSymptoms}
-            setSelectedSymptoms={setSelectedSymptoms}
-            symptomType={symptomType}
-            setSymptomType={setSymptomType}
-            symptomDescription={symptomDescription}
-            setSymptomDescription={setSymptomDescription}
-          />
-        </Col>
+        {!hideSymptoms && (
+          <Col span={24}>
+            <SymptomsForm
+              form={form}
+              selectedSymptoms={selectedSymptoms}
+              setSelectedSymptoms={setSelectedSymptoms}
+              symptomType={symptomType}
+              setSymptomType={setSymptomType}
+              symptomDescription={symptomDescription}
+              setSymptomDescription={setSymptomDescription}
+            />
+          </Col>
+        )}
       </>
     );
   } else if (edit === "patient") {
@@ -783,17 +826,19 @@ function PatientRegistrationPage({ edit }) {
             <OPDForm form={form} />
           </Col>
         )}
-        <Col span={24}>
-          <SymptomsForm
-            form={form}
-            selectedSymptoms={selectedSymptoms}
-            setSelectedSymptoms={setSelectedSymptoms}
-            symptomType={symptomType}
-            setSymptomType={setSymptomType}
-            symptomDescription={symptomDescription}
-            setSymptomDescription={setSymptomDescription}
-          />
-        </Col>
+        {!hideSymptoms && (
+          <Col span={24}>
+            <SymptomsForm
+              form={form}
+              selectedSymptoms={selectedSymptoms}
+              setSelectedSymptoms={setSelectedSymptoms}
+              symptomType={symptomType}
+              setSymptomType={setSymptomType}
+              symptomDescription={symptomDescription}
+              setSymptomDescription={setSymptomDescription}
+            />
+          </Col>
+        )}
         <Col span={24}>
           <Card title="Contact Details" variant="borderless">
             <Row gutter={16}>
@@ -935,6 +980,7 @@ function PatientRegistrationPage({ edit }) {
         <Form
           form={form}
           layout="vertical"
+          onKeyDown={handleEnterNavigation}
           onFinishFailed={() => toast.error("Please fill all required fields")}
           onFinish={onFinish}
           autoComplete="off"
