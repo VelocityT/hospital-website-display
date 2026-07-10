@@ -110,7 +110,9 @@ const EyeQueue = () => {
       key: "actions",
       render: (_, r) => (
         <Space>
-          {["optometrist", "admin", "doctor"].includes(user?.role) && (
+          {["optometrist", "admin", "doctor", "receptionist"].includes(
+            user?.role
+          ) && (
             <Button size="small" onClick={() => goToWorkup(r)}>
               {r.eyeExam?.workup?.workupAt ? "Edit Workup" : "Start Workup"}
             </Button>
