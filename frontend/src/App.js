@@ -41,6 +41,43 @@ function AppContent() {
     }
   }, []);
 
+  // Global "Enter = next field" for every form in the app.
+  // On a middle field, Enter moves focus to the next input; on the last
+  // field it falls through to the browser's native submit. Textareas keep
+  // their newlines, buttons keep their click, and an open dropdown still
+  // lets Enter pick the highlighted option.
+  useEffect(() => {
+    const onEnter = (e) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      const el = e.target;
+      if (!el || el.tagName !== "INPUT") return;
+      if (["submit", "button", "checkbox", "radio", "file"].includes(el.type)) {
+        return;
+      }
+      const formEl = el.closest("form");
+      if (!formEl) return;
+      if (
+        el.getAttribute("role") === "combobox" &&
+        el.getAttribute("aria-expanded") === "true"
+      ) {
+        return; // let AntD Select pick the highlighted option
+      }
+      const focusables = Array.from(
+        formEl.querySelectorAll(
+          'input:not([type="hidden"]):not([disabled]), textarea:not([disabled])'
+        )
+      ).filter((n) => n.offsetParent !== null && n.tabIndex !== -1);
+      const idx = focusables.indexOf(el);
+      if (idx > -1 && idx < focusables.length - 1) {
+        e.preventDefault();
+        focusables[idx + 1].focus();
+      }
+      // last field: allow the native Enter to submit the form
+    };
+    document.addEventListener("keydown", onEnter);
+    return () => document.removeEventListener("keydown", onEnter);
+  }, []);
+
   const leaveImpersonation = async () => {
     try {
       const res = await leaveImpersonationApi();
