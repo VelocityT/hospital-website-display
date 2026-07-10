@@ -49,6 +49,7 @@ function PatientRegistrationPage({ edit }) {
   );
 
   const [patientType, setPatientType] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [symptomType, setSymptomType] = useState([]);
   const [symptomDescription, setSymptomDescription] = useState("");
@@ -218,6 +219,8 @@ function PatientRegistrationPage({ edit }) {
   }, [patientType, edit]);
 
   const onFinish = async (values) => {
+    if (submitting) return; // guard against double-submit (Enter / double-click)
+    setSubmitting(true);
     try {
       const formData = new FormData();
 
@@ -305,6 +308,8 @@ function PatientRegistrationPage({ edit }) {
       setSymptomDescription("");
     } catch (error) {
       toast.error(error.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -961,7 +966,13 @@ function PatientRegistrationPage({ edit }) {
             {content}
             <Col span={24}>
               <Form.Item className="text-end mt-4">
-                <Button type="primary" size="large" htmlType="submit">
+                <Button
+                  type="primary"
+                  size="large"
+                  htmlType="submit"
+                  loading={submitting}
+                  disabled={submitting}
+                >
                   {isEdit ? "Update Patient" : "Register Patient"}
                 </Button>
               </Form.Item>

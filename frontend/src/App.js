@@ -47,8 +47,16 @@ function AppContent() {
   // their newlines, buttons keep their click, and an open dropdown still
   // lets Enter pick the highlighted option.
   useEffect(() => {
+    // Throttle Enter-submits so no form can be submitted twice in quick
+    // succession from the keyboard, even one without its own submit lock.
+    let lastSubmit = { form: null, at: 0 };
     const onEnter = (e) => {
       if (e.key !== "Enter" || e.shiftKey) return;
+      // Ignore auto-repeat from a held Enter key so it can never spam actions.
+      if (e.repeat) {
+        e.preventDefault();
+        return;
+      }
       const el = e.target;
       if (!el || el.tagName !== "INPUT") return;
       if (["submit", "button", "checkbox", "radio", "file"].includes(el.type)) {
@@ -71,8 +79,23 @@ function AppContent() {
       if (idx > -1 && idx < focusables.length - 1) {
         e.preventDefault();
         focusables[idx + 1].focus();
+      } else if (idx === focusables.length - 1) {
+        // Last field: submit exactly once via the ENABLED submit button, and
+        // block the browser's native submit (which would fire on every key
+        // event). If the button is disabled (form already submitting), do
+        // nothing — this is what stops duplicate submissions.
+        e.preventDefault();
+        const now = Date.now();
+        // Ignore a second Enter-submit on the same form within 1.2s.
+        if (lastSubmit.form === formEl && now - lastSubmit.at < 1200) return;
+        const btn = formEl.querySelector(
+          'button[type="submit"]:not([disabled])'
+        );
+        if (btn) {
+          lastSubmit = { form: formEl, at: now };
+          btn.click();
+        }
       }
-      // last field: allow the native Enter to submit the form
     };
     document.addEventListener("keydown", onEnter);
     return () => document.removeEventListener("keydown", onEnter);
