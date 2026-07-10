@@ -6,7 +6,6 @@ import {
   Statistic,
   Table,
   Tag,
-  Typography,
   Divider,
 } from "antd";
 import { getDashboardStaticData } from "../../services/apis";

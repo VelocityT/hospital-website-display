@@ -3,9 +3,10 @@ import mongoose from "mongoose";
 const billSchema = new mongoose.Schema(
   {
     hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
+    // Unique per hospital (not globally). Enforced by the compound index
+    // below so two hospitals can each have their own bill sequence.
     billNumber: {
       type: String,
-      unique: true,
     },
     patient: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,6 +55,11 @@ const billSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Bill numbers are generated per hospital (see generateBillNumber), so
+// uniqueness must be scoped to the hospital — otherwise different hospitals
+// collide on the same padded counter (e.g. "000005").
+billSchema.index({ hospital: 1, billNumber: 1 }, { unique: true });
 
 const Bill = mongoose.model("Bill", billSchema);
 export default Bill;
