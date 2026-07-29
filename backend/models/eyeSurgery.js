@@ -7,7 +7,10 @@ const eyeSurgerySchema = new mongoose.Schema(
       ref: "Hospital",
       required: true,
     },
-    surgeryNumber: { type: String, unique: true, required: true },
+    // Generated from a PER-HOSPITAL counter (surgeryCounter), so uniqueness
+    // must be scoped to the hospital via the compound index below.
+    // A global unique index here would make two hospitals collide on "SUR-00001".
+    surgeryNumber: { type: String, required: true },
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",
@@ -112,6 +115,7 @@ const eyeSurgerySchema = new mongoose.Schema(
 );
 
 eyeSurgerySchema.index({ hospital: 1, status: 1, otDate: 1 });
+eyeSurgerySchema.index({ hospital: 1, surgeryNumber: 1 }, { unique: true });
 
 const EyeSurgery = mongoose.model("EyeSurgery", eyeSurgerySchema);
 export default EyeSurgery;

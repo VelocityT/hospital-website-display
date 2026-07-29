@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const opdVisitSchema = new mongoose.Schema({
   hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
-  opdNumber: { type: String, unique: true, required: true },
+  // Per-hospital number — uniqueness enforced by the compound index below.
+  opdNumber: { type: String, required: true },
   patient: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Patient",
@@ -45,6 +46,10 @@ const opdVisitSchema = new mongoose.Schema({
     { type: mongoose.Schema.Types.ObjectId, ref: "Prescription" },
   ],
 });
+
+// OPD numbers are generated per hospital, so uniqueness must be scoped to the
+// hospital — a global index makes two hospitals collide on the same number.
+opdVisitSchema.index({ hospital: 1, opdNumber: 1 }, { unique: true });
 
 const Opd = mongoose.model("Opd", opdVisitSchema);
 export default Opd;

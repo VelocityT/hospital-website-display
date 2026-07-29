@@ -71,14 +71,17 @@ export const createPrescription = async (req, res) => {
       $push: { prescriptions: newPrescription._id },
     });
 
+    // NOTE: always scope lookups by hospital. IPD/OPD numbers are generated
+    // from per-hospital counters, so an unscoped findOneAndUpdate can attach
+    // this prescription to another hospital's visit record.
     if (patientType === "ipd" && ipd) {
       await Ipd.findOneAndUpdate(
-        { ipdNumber: ipd },
+        { ipdNumber: ipd, hospital },
         { $push: { prescriptions: newPrescription._id } }
       );
     } else if (patientType === "opd" && opd) {
       await Opd.findOneAndUpdate(
-        { opdNumber: opd },
+        { opdNumber: opd, hospital },
         { $push: { prescriptions: newPrescription._id } }
       );
     }

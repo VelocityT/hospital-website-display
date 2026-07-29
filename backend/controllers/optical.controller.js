@@ -1,19 +1,21 @@
-import Hospital from "../models/hospital.js";
 import Bill from "../models/bill.js";
 import OpticalItem from "../models/opticalItem.js";
 import OpticalOrder from "../models/opticalOrder.js";
-import { generateBillNumber } from "../utils/generateCustomId.js";
+import {
+  generateBillNumber,
+  generateSequenceNumber,
+} from "../utils/generateCustomId.js";
 
-const generateOpticalOrderNumber = async (hospitalId) => {
-  const updatedHospital = await Hospital.findOneAndUpdate(
-    { _id: hospitalId },
-    { $inc: { opticalCounter: 1 } },
-    { new: true }
-  ).lean();
-  if (!updatedHospital) throw new Error("Hospital not found");
-  const paddedCount = String(updatedHospital.opticalCounter).padStart(5, "0");
-  return `OPT-${paddedCount}`;
-};
+// Per-hospital order number (OPT-00001). generateSequenceNumber verifies the
+// candidate is free for THIS hospital, so a drifted counter can't cause E11000.
+const generateOpticalOrderNumber = (hospitalId) =>
+  generateSequenceNumber(
+    hospitalId,
+    "opticalCounter",
+    "OPT",
+    "opticalorders",
+    "orderNumber"
+  );
 
 // ---------------- Inventory ----------------
 

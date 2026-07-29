@@ -4,9 +4,11 @@ const patientSchema = new mongoose.Schema(
   {
     hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
     registrationDate: { type: Date, default: Date.now },
+    // Generated from a PER-HOSPITAL counter + prefix (see generateCustomId),
+    // so uniqueness is scoped to the hospital by the compound index below.
+    // A global unique index makes two hospitals collide on e.g. "PT-001".
     patientId: {
       type: String,
-      unique: true,
       default: () => `HOSP-${Date.now().toString().slice(-6)}`,
     },
     fullName: { type: String, required: true },
@@ -58,6 +60,11 @@ const patientSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Patient IDs are generated per hospital (prefix + counter), so uniqueness must
+// be scoped to the hospital — otherwise two hospitals using the same prefix
+// collide on "PT-001".
+patientSchema.index({ hospital: 1, patientId: 1 }, { unique: true });
 
 const Patient = mongoose.model("Patient", patientSchema);
 export default Patient;

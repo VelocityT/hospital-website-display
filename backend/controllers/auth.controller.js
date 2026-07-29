@@ -83,6 +83,65 @@ export const loginUser = async (req, res) => {
   }
 };
 
+/**
+ * GET /auth/check-prefix?staffPrefix=ST&patientPrefix=PT&hospitalId=<id>
+ *
+ * Soft (non-blocking) check used by the Add/Edit Hospital form.
+ *
+ * Patient and staff IDs are generated per hospital, so duplicate prefixes are
+ * technically SAFE — "NA-001" in two hospitals are two distinct records and the
+ * compound {hospital, patientId} index keeps them apart. But duplicates are
+ * confusing for humans (support calls, printed reports, superAdmin views), so
+ * we warn the operator without preventing them from saving.
+ */
+export const checkHospitalPrefix = async (req, res) => {
+  try {
+    const { staffPrefix, patientPrefix, hospitalId } = req.query;
+
+    // Exclude the hospital being edited from its own conflict check.
+    const baseQuery = { isDeleted: { $ne: true } };
+    if (hospitalId && hospitalId.length === 24) {
+      baseQuery._id = { $ne: hospitalId };
+    }
+
+    const [staffConflicts, patientConflicts] = await Promise.all([
+      staffPrefix
+        ? Hospital.find(
+            { ...baseQuery, staffPrefix: staffPrefix.toUpperCase() },
+            "fullName staffPrefix"
+          ).lean()
+        : [],
+      patientPrefix
+        ? Hospital.find(
+            { ...baseQuery, patientPrefix: patientPrefix.toUpperCase() },
+            "fullName patientPrefix"
+          ).lean()
+        : [],
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        staffPrefix: {
+          inUse: staffConflicts.length > 0,
+          hospitals: staffConflicts.map((h) => h.fullName),
+        },
+        patientPrefix: {
+          inUse: patientConflicts.length > 0,
+          hospitals: patientConflicts.map((h) => h.fullName),
+        },
+      },
+    });
+  } catch (error) {
+    // Never break the form on a warning check — fail quietly.
+    return res.status(200).json({
+      success: false,
+      message: "Prefix check unavailable",
+      error: error.message,
+    });
+  }
+};
+
 export const logoutUser = async (req, res) => {
   try {
     res.clearCookie("token", {

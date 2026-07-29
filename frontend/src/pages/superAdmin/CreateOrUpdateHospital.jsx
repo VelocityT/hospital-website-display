@@ -1,9 +1,13 @@
 import { Card, Form, Input, Button, Switch, Row, Col, Upload } from "antd";
 import { useEffect, useState } from "react";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, WarningOutlined } from "@ant-design/icons";
 import { toast } from "react-hot-toast";
-import { createOrUpdateHospitalApi } from "../../services/apis";
+import {
+  createOrUpdateHospitalApi,
+  checkHospitalPrefixApi,
+} from "../../services/apis";
 import { useLocation, useNavigate } from "react-router-dom";
+import useDebounce from "../../hooks/useDebounce";
 
 const moduleList = [
   "pharmacy",
@@ -21,6 +25,24 @@ const moduleLabels = {
   ot: "OT",
 };
 
+// Non-blocking warning shown under a prefix field when another hospital already
+// uses it. Duplicate prefixes are SAFE at the database level — patient/staff IDs
+// are unique per hospital, so "NA-001" in two hospitals are two distinct
+// records. But duplicates confuse staff, support calls and superAdmin views,
+// so we nudge the operator without preventing them from saving.
+const PrefixWarning = ({ result }) => {
+  if (!result?.inUse) return null;
+  return (
+    <div className="text-amber-600 dark:text-amber-400 text-xs -mt-4 mb-3 flex items-start gap-1">
+      <WarningOutlined className="mt-0.5 shrink-0" />
+      <span>
+        Already used by <b>{result.hospitals.join(", ")}</b>. Records stay
+        separate, but a unique prefix avoids confusion in reports and support.
+      </span>
+    </div>
+  );
+};
+
 const CreateOrUpdateHospital = ({ edit }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -30,12 +52,37 @@ const CreateOrUpdateHospital = ({ edit }) => {
   const hospitalData = location?.state?.hospital || null;
   const navigate = useNavigate();
 
+  // --- Soft prefix conflict check (warning only, never blocks submit) ---
+  const [staffPrefix, setStaffPrefix] = useState("");
+  const [patientPrefix, setPatientPrefix] = useState("");
+  const [prefixCheck, setPrefixCheck] = useState(null);
+  const debouncedStaffPrefix = useDebounce(staffPrefix, 500);
+  const debouncedPatientPrefix = useDebounce(patientPrefix, 500);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!debouncedStaffPrefix && !debouncedPatientPrefix) {
+        setPrefixCheck(null);
+        return;
+      }
+      const res = await checkHospitalPrefixApi({
+        staffPrefix: debouncedStaffPrefix || undefined,
+        patientPrefix: debouncedPatientPrefix || undefined,
+        hospitalId: hospitalData?._id, // exclude self when editing
+      });
+      setPrefixCheck(res.success ? res.data : null);
+    };
+    run();
+  }, [debouncedStaffPrefix, debouncedPatientPrefix, hospitalData?._id]);
+
   useEffect(() => {
     if (edit && hospitalData) {
       form.setFieldsValue({
         ...hospitalData,
         ...hospitalData.modules,
       });
+      setStaffPrefix(hospitalData.staffPrefix || "");
+      setPatientPrefix(hospitalData.patientPrefix || "");
 
       if (hospitalData.logoUrl) {
         setPreviewImage(hospitalData.logoUrl);
@@ -213,7 +260,7 @@ const CreateOrUpdateHospital = ({ edit }) => {
                   <Form.Item
                     label="Staff Prefix"
                     name="staffPrefix"
-                    tooltip="This prefix is for patient ID creation"
+                    tooltip="Used to generate staff IDs, e.g. ST-001"
                     rules={[
                       { required: true, message: "Please enter staff prefix" },
                       {
@@ -222,15 +269,21 @@ const CreateOrUpdateHospital = ({ edit }) => {
                       },
                     ]}
                   >
-                    <Input placeholder="E.g., ST" />
+                    <Input
+                      placeholder="E.g., ST"
+                      onChange={(e) =>
+                        setStaffPrefix(e.target.value.toUpperCase())
+                      }
+                    />
                   </Form.Item>
+                  <PrefixWarning result={prefixCheck?.staffPrefix} />
                 </Col>
 
                 <Col xs={24} sm={6}>
                   <Form.Item
                     label="Patient Prefix"
                     name="patientPrefix"
-                    tooltip="This prefix is for patient ID creation"
+                    tooltip="Used to generate patient IDs, e.g. PT-001"
                     rules={[
                       {
                         required: true,
@@ -242,8 +295,14 @@ const CreateOrUpdateHospital = ({ edit }) => {
                       },
                     ]}
                   >
-                    <Input placeholder="E.g., PT" />
+                    <Input
+                      placeholder="E.g., PT"
+                      onChange={(e) =>
+                        setPatientPrefix(e.target.value.toUpperCase())
+                      }
+                    />
                   </Form.Item>
+                  <PrefixWarning result={prefixCheck?.patientPrefix} />
                 </Col>
               </Row>
             </Col>

@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
+    // Generated from a PER-HOSPITAL counter + prefix (see generateCustomId),
+    // so uniqueness is scoped to the hospital by the compound index below.
+    // NOTE: email and phone stay GLOBALLY unique — they are login identity.
     staffId: {
       type: String,
-      unique: true,
       required: true,
     },
     fullName: { type: String, required: true },
@@ -64,6 +66,10 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Staff IDs are generated per hospital (prefix + counter), so uniqueness must
+// be scoped to the hospital. email/phone remain globally unique (login identity).
+userSchema.index({ hospital: 1, staffId: 1 }, { unique: true });
 
 const User = mongoose.model("User", userSchema);
 export default User;

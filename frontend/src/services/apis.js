@@ -419,6 +419,14 @@ export const createOrUpdateHospitalApi = async (formData) => {
     return error.response?.data || error.message;
   }
 };
+export const checkHospitalPrefixApi = async (params = {}) => {
+  try {
+    const response = await API.get("/auth/check-prefix", { params });
+    return response.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
 export const getHospitalsListApi = async () => {
   try {
     const response = await API.get("/auth/hospitals-list");

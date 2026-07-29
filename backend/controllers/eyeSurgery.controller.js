@@ -1,18 +1,20 @@
-import Hospital from "../models/hospital.js";
 import Bill from "../models/bill.js";
 import EyeSurgery from "../models/eyeSurgery.js";
-import { generateBillNumber } from "../utils/generateCustomId.js";
+import {
+  generateBillNumber,
+  generateSequenceNumber,
+} from "../utils/generateCustomId.js";
 
-const generateSurgeryNumber = async (hospitalId) => {
-  const updatedHospital = await Hospital.findOneAndUpdate(
-    { _id: hospitalId },
-    { $inc: { surgeryCounter: 1 } },
-    { new: true }
-  ).lean();
-  if (!updatedHospital) throw new Error("Hospital not found");
-  const paddedCount = String(updatedHospital.surgeryCounter).padStart(5, "0");
-  return `SUR-${paddedCount}`;
-};
+// Per-hospital surgery number (SUR-00001). generateSequenceNumber verifies the
+// candidate is free for THIS hospital, so a drifted counter can't cause E11000.
+const generateSurgeryNumber = (hospitalId) =>
+  generateSequenceNumber(
+    hospitalId,
+    "surgeryCounter",
+    "SUR",
+    "eyesurgeries",
+    "surgeryNumber"
+  );
 
 // POST /eye-surgery  (create — usually from doctor "advise surgery")
 export const createEyeSurgery = async (req, res) => {

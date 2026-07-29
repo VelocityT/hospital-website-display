@@ -15,7 +15,10 @@ const opticalOrderSchema = new mongoose.Schema(
       ref: "Hospital",
       required: true,
     },
-    orderNumber: { type: String, unique: true, required: true },
+    // Generated from a PER-HOSPITAL counter (opticalCounter), so uniqueness
+    // must be scoped to the hospital via the compound index below.
+    // A global unique index here would make two hospitals collide on "OPT-00001".
+    orderNumber: { type: String, required: true },
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",
@@ -74,6 +77,7 @@ const opticalOrderSchema = new mongoose.Schema(
 );
 
 opticalOrderSchema.index({ hospital: 1, status: 1, createdAt: -1 });
+opticalOrderSchema.index({ hospital: 1, orderNumber: 1 }, { unique: true });
 
 const OpticalOrder = mongoose.model("OpticalOrder", opticalOrderSchema);
 export default OpticalOrder;

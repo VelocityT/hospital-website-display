@@ -9,6 +9,7 @@ import {
   getHospitalById,
   impersonateUser,
   leaveImpersonation,
+  checkHospitalPrefix,
 } from "../controllers/auth.controller.js";
 import { authenticateToken } from "../middlewares/auth.middleware.js";
 import { roleBasedAccess } from "../middlewares/roleBaseAccess.middleare.js";
@@ -30,6 +31,7 @@ router.post(
   upload.single("logo"),
   createOrUpdateHospital
 );
+router.get("/check-prefix", checkHospitalPrefix);
 router.get("/hospitals-list", getHospitalList);
 router.get("/hospital/:id", getHospitalById);
 router.post("/impersonate/:userId", impersonateUser);
