@@ -52,6 +52,25 @@ export const payPatientIpdBill = async (req, res) => {
       0
     );
 
+    // Never allow collecting more than what is actually outstanding.
+    // The UI already caps this, but the API must enforce it independently —
+    // otherwise a stale tab or a direct API call produces a negative balance.
+    const remainingBalance = totalAmountFromDb - totalChargePaid;
+
+    if (remainingBalance <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "This IPD bill is already fully paid. Nothing is pending.",
+      });
+    }
+
+    if (amountPaying > remainingBalance) {
+      return res.status(400).json({
+        success: false,
+        message: `Amount exceeds the pending balance of ₹${remainingBalance}.`,
+      });
+    }
+
     const doesFullPaymentDone = totalChargePaid + amountPaying;
 
     const billNumber = await generateBillNumber(hospital);
@@ -295,6 +314,29 @@ export const payPatientMedicineBill = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Medicine order not found.",
+      });
+    }
+
+    // Guard against overpayment (same reasoning as the IPD flow above).
+    const medicineAlreadyPaid = (order?.payment?.bill || []).reduce(
+      (sum, b) => sum + (b?.paidAmount || 0),
+      0
+    );
+    const medicineRemaining = +(
+      (order?.payableAmount || 0) - medicineAlreadyPaid
+    ).toFixed(2);
+
+    if (medicineRemaining <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "This medicine order is already fully paid. Nothing is pending.",
+      });
+    }
+
+    if (amountPaying > medicineRemaining) {
+      return res.status(400).json({
+        success: false,
+        message: `Amount exceeds the pending balance of ₹${medicineRemaining}.`,
       });
     }
 

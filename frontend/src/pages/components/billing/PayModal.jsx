@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Form, InputNumber, Select, Row, Col } from "antd";
+import { Alert, Button, Form, InputNumber, Select, Row, Col } from "antd";
 import toast from "react-hot-toast";
 import {
   payPatientIpdBillApi,
@@ -12,16 +12,25 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
   const [form] = Form.useForm();
   const [payingAmount, setPayingAmount] = useState(0);
 
+  // `selectedEntry.total` is the REMAINING balance for this entry, not the
+  // original charge. If it is 0 (or negative, meaning the patient has already
+  // overpaid) there is nothing left to collect — every input is locked so no
+  // one can record a payment against a settled bill.
+  const balanceDue = Number(data?.selectedEntry?.total || 0);
+  const isSettled = balanceDue <= 0;
+  const isOverpaid = balanceDue < 0;
+
   useEffect(() => {
+    const due = Math.max(balanceDue, 0);
     form.setFieldsValue({
-      totalAmount: data?.selectedEntry?.total || 0,
-      amountPaying: data?.selectedEntry?.total || 0,
+      totalAmount: balanceDue,
+      amountPaying: due,
       tax: 0,
       discount: 0,
       paymentMethod: "Cash",
     });
-    calculateFinal(data?.selectedEntry?.total, 0, 0);
-  }, [data, form]);
+    calculateFinal(due, 0, 0);
+  }, [data, form, balanceDue]);
 
   const calculateFinal = (amount = 0, tax = 0, discount = 0) => {
     const total =
@@ -37,7 +46,20 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
 
   const handlePayment = async () => {
     try {
+      // Guard 1: nothing pending on this entry.
+      if (isSettled) {
+        toast.error("This bill is already fully paid. Nothing pending.");
+        return;
+      }
+
+      await form.validateFields();
       const values = form.getFieldsValue();
+
+      // Guard 2: never collect more than the outstanding balance.
+      if (Number(values.amountPaying) > balanceDue) {
+        toast.error(`Amount cannot exceed the pending balance of ₹${balanceDue}`);
+        return;
+      }
 
       const payload = {
         ...values,
@@ -134,10 +156,27 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
 
   return (
     <div>
+      {isSettled && (
+        <Alert
+          className="mb-4"
+          type={isOverpaid ? "warning" : "success"}
+          showIcon
+          message={
+            isOverpaid
+              ? `Overpaid by ₹${Math.abs(balanceDue)}`
+              : "Bill fully paid"
+          }
+          description={
+            isOverpaid
+              ? "More has been collected than the total charge. No further payment can be recorded — please issue a refund or adjust the earlier bill."
+              : "There is no pending amount for this entry, so no further payment can be recorded."
+          }
+        />
+      )}
       <Form layout="vertical" form={form} onValuesChange={handleValuesChange}>
         <Row gutter={16}>
           <Col md={8} xs={24}>
-            <Form.Item label="Total Charge" name="totalAmount">
+            <Form.Item label="Pending Amount" name="totalAmount">
               <InputNumber className="w-full" disabled />
             </Form.Item>
           </Col>
@@ -146,13 +185,37 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
             <Form.Item
               label="Amount Paying"
               name="amountPaying"
-              rules={[{ required: true, message: "Enter payment amount" }]}
+              rules={[
+                { required: true, message: "Enter payment amount" },
+                {
+                  validator: (_, value) => {
+                    if (value === undefined || value === null) {
+                      return Promise.resolve();
+                    }
+                    if (Number(value) <= 0) {
+                      return Promise.reject(
+                        new Error("Amount must be greater than 0")
+                      );
+                    }
+                    if (Number(value) > balanceDue) {
+                      return Promise.reject(
+                        new Error(`Cannot exceed pending ₹${balanceDue}`)
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <InputNumber
                 min={0}
+                max={Math.max(balanceDue, 0)}
                 className="w-full"
                 placeholder="Enter amount"
+                // Locked when the bill is settled, and for entry types whose
+                // amount is fixed by the system (OPD consultation / lab test).
                 disabled={
+                  isSettled ||
                   data?.selectedEntry?.type === "OPD" ||
                   data?.selectedEntry?.type === "Pathology"
                 }
@@ -162,7 +225,12 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
 
           <Col md={8} xs={24}>
             <Form.Item label="Tax" name="tax">
-              <InputNumber min={0} className="w-full" placeholder="Enter tax" />
+              <InputNumber
+                min={0}
+                className="w-full"
+                placeholder="Enter tax"
+                disabled={isSettled}
+              />
             </Form.Item>
           </Col>
 
@@ -170,10 +238,10 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
             <Form.Item label="Discount" name="discount">
               <InputNumber
                 min={0}
-                max={data?.selectedEntry?.total / 2}
+                max={Math.max(balanceDue, 0) / 2}
                 className="w-full"
                 placeholder="Enter discount"
-                rules={[{ required: true, message: "Select payment method" }]}
+                disabled={isSettled}
               />
             </Form.Item>
           </Col>
@@ -194,7 +262,7 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
               name="paymentMethod"
               rules={[{ required: true, message: "Select payment method" }]}
             >
-              <Select>
+              <Select disabled={isSettled}>
                 <Select.Option value="Cash">Cash</Select.Option>
                 <Select.Option value="Card">Card</Select.Option>
                 <Select.Option value="UPI">UPI</Select.Option>
@@ -205,7 +273,7 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
 
         <Form.Item>
           <div className="flex justify-end">
-            <Button type="primary" onClick={handlePayment}>
+            <Button type="primary" onClick={handlePayment} disabled={isSettled}>
               Pay and Generate Bill
             </Button>
           </div>
