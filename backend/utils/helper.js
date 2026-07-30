@@ -1,5 +1,8 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
+// The ".js" is REQUIRED. dayjs 1.11.13 ships no "exports" map, so Node's ESM
+// resolver does no extension guessing — "dayjs/plugin/utc" throws
+// ERR_MODULE_NOT_FOUND. Verified empirically; do not "tidy" these.
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 
