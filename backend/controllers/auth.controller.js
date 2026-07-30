@@ -797,6 +797,25 @@ export const createOrUpdateHospital = async (req, res) => {
       });
     }
 
+    // Validate the ADMIN before creating the hospital.
+    // User email/phone are GLOBALLY unique (login identity), so this check can
+    // fail for a perfectly valid new hospital. It used to run *after*
+    // Hospital.create(), which left an orphan hospital behind on every failure:
+    // the operator would fix the admin email, resubmit, and then be blocked by
+    // "Hospital with this email or phone already exists" — caused by the ghost
+    // record from their own first attempt. Order matters here; don't move it.
+    const existingAdmin = await User.findOne({
+      $or: [{ email: adminEmail }, { phone: adminPhone }],
+    });
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "A user with this admin email or phone already exists. " +
+          "Email and phone are unique across all hospitals — use a different one.",
+      });
+    }
+
     const hashedPassword = await hashPassword(adminPassword);
 
     const newHospital = await Hospital.create({
@@ -812,16 +831,6 @@ export const createOrUpdateHospital = async (req, res) => {
       staffPrefix,
       patientPrefix,
     });
-
-    const existingAdmin = await User.findOne({
-      $or: [{ email: adminEmail }, { phone: adminPhone }],
-    });
-    if (existingAdmin) {
-      return res.status(400).json({
-        success: false,
-        message: "Admin with this email or phone already exists",
-      });
-    }
 
     const staffId = await generateCustomId(newHospital._id, "staff");
     const newAdmin = await User.create({
