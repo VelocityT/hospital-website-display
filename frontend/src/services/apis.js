@@ -347,12 +347,18 @@ export const searchPatientApi = async (params) => {
     return error.response?.data || error.message;
   }
 };
+// NOTE on error handling for the pay* endpoints:
+// the axios response interceptor in services/index.js already rejects with
+// `error.response.data`, i.e. the API envelope {success,message,data}. Doing
+// `error.response?.data || error.message` here unwrapped it a SECOND time and
+// returned a bare string, so the caller lost both `success` and `message` and
+// could only show a generic "payment failed". Return the envelope instead.
 export const payPatientIpdBillApi = async (payload) => {
   try {
     const res = await API.post("/pay/patient-ipd-bill", payload);
     return res.data;
   } catch (error) {
-    return error.response?.data || error.message;
+    return error?.response?.data || error;
   }
 };
 export const payPatientPathologyBillApi = async (payload) => {
@@ -360,7 +366,7 @@ export const payPatientPathologyBillApi = async (payload) => {
     const res = await API.post("/pay/patient-pathology-bill", payload);
     return res.data;
   } catch (error) {
-    return error.response?.data || error.message;
+    return error?.response?.data || error;
   }
 };
 export const payPatientMedicineBillApi = async (payload) => {
@@ -368,7 +374,7 @@ export const payPatientMedicineBillApi = async (payload) => {
     const res = await API.post("/pay/patient-medicine-bill", payload);
     return res.data;
   } catch (error) {
-    return error.response?.data || error.message;
+    return error?.response?.data || error;
   }
 };
 export const payPatientOpdBillApi = async (payload) => {
@@ -376,7 +382,7 @@ export const payPatientOpdBillApi = async (payload) => {
     const res = await API.post("/pay/patient-opd-bill", payload);
     return res.data;
   } catch (error) {
-    return error.response?.data || error.message;
+    return error?.response?.data || error;
   }
 };
 export const uploadMedicineExcelApi = async (formData) => {
