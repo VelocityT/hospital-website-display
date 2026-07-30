@@ -27,8 +27,12 @@ export const IpdChargeTable = ({
       {ipdEntries.map((ipd) => {
         const admissionDate = dayjs(ipd.admissionDate);
 
-        const dischargeDate =
-          dayjs(ipd?.dischargeSummary?.dischargeDate) || null;
+        // `dayjs(undefined)` returns NOW and is truthy, so the old
+        // `dayjs(x) || null` never produced null — it silently billed
+        // undischarged patients against the current time twice over.
+        const dischargeDate = ipd?.dischargeSummary?.dischargeDate
+          ? dayjs(ipd.dischargeSummary.dischargeDate)
+          : null;
 
         const days = calculateStayDays(admissionDate, dischargeDate);
 
@@ -40,6 +44,11 @@ export const IpdChargeTable = ({
             (sum, bill) => sum + (+bill?.totalCharge || 0),
             0
           ) || 0;
+        // Trust the arithmetic, not just payment.status — the flag only flips
+        // to "Paid" on discharge, so a settled bill on an admitted patient
+        // must still hide the Pay button.
+        const balanceDue = +(total - paidBillSum).toFixed(2);
+        const isSettled = balanceDue <= 0 || ipd?.payment?.status === "Paid";
 
         return (
           <div
@@ -77,14 +86,14 @@ export const IpdChargeTable = ({
                   )}
                   {!print && (
                     <>
-                      {ipd?.payment?.status !== "Paid" ? (
+                      {!isSettled ? (
                         <Button
                           type="primary"
                           onClick={() =>
                             setSelectedEntry({
                               ...ipd,
                               type: "IPD",
-                              total: total - paidBillSum,
+                              total: balanceDue,
                             })
                           }
                           className="bg-green-600 hover:bg-green-700 border-none rounded-full print:hidden"
@@ -136,7 +145,11 @@ export const IpdChargeTable = ({
             {!print && (
               <Row justify="end">
                 <Text strong className={`${print && "text-black"}`}>
-                  To be paid: ₹{total - paidBillSum}
+                  {balanceDue > 0
+                    ? `To be paid: ₹${balanceDue}`
+                    : balanceDue < 0
+                    ? `Overpaid by ₹${Math.abs(balanceDue)}`
+                    : "Fully paid"}
                 </Text>
               </Row>
             )}

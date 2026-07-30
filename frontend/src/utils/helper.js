@@ -1,4 +1,16 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/**
+ * Timezone every date-boundary calculation is anchored to.
+ * MUST stay identical to HOSPITAL_TZ in backend/utils/helper.js — see the
+ * comment there for the billing bug this prevents.
+ */
+export const HOSPITAL_TZ = "Asia/Kolkata";
 
 export function generateUniqueNumber(prefix) {
   const now = Date.now().toString().slice(-6);
@@ -25,12 +37,21 @@ export const handleNumericKeyDown = (e) => {
   }
 };
 
+/**
+ * Billable days for an IPD stay. Must produce the SAME number as
+ * calculateStayDays in backend/utils/helper.js — the API rejects a payment
+ * whose amount disagrees with its own total, so any drift between these two
+ * implementations shows up as "This IPD bill is already fully paid".
+ */
 export const calculateStayDays = (admissionDate, dischargeDate) => {
   const admission = dayjs(admissionDate)
+    .tz(HOSPITAL_TZ)
     .startOf("day")
     .add(1, "day")
     .add(1, "minute");
-  const discharge = dischargeDate ? dayjs(dischargeDate) : dayjs();
+  const discharge = dischargeDate
+    ? dayjs(dischargeDate).tz(HOSPITAL_TZ)
+    : dayjs().tz(HOSPITAL_TZ);
 
   const days = discharge.diff(admission, "day") + 1;
 

@@ -8,16 +8,48 @@ import {
   payPatientPathologyBillApi,
 } from "../../../services/apis";
 
-const PayModal = ({ data, setSelectedEntry, setPatient }) => {
+// type -> { api, key of the updated doc in the response, patient array to patch }
+const ENTRY_CONFIG = {
+  Pathology: {
+    api: payPatientPathologyBillApi,
+    resultKey: "updatedReport",
+    listKey: "pathologyTestReports",
+    label: "Lab Test",
+  },
+  Medicine: {
+    api: payPatientMedicineBillApi,
+    resultKey: "updatedOrder",
+    listKey: "medicineOrders",
+    label: "Medicine",
+  },
+  OPD: {
+    api: payPatientOpdBillApi,
+    resultKey: "updatedOpd",
+    listKey: "opds",
+    label: "OPD",
+  },
+  IPD: {
+    api: payPatientIpdBillApi,
+    resultKey: "updatedIpd",
+    listKey: "ipds",
+    label: "IPD",
+  },
+};
+
+const PayModal = ({ data, setSelectedEntry, setPatient, onRefresh }) => {
   const [form] = Form.useForm();
   const [payingAmount, setPayingAmount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   // `selectedEntry.total` is the REMAINING balance for this entry, not the
   // original charge. If it is 0 (or negative, meaning the patient has already
   // overpaid) there is nothing left to collect — every input is locked so no
   // one can record a payment against a settled bill.
-  const balanceDue = Number(data?.selectedEntry?.total || 0);
-  const isSettled = balanceDue <= 0;
+  // Number(undefined) is NaN, which fails every comparison and would leave the
+  // form open, so anything non-numeric is treated as "nothing to collect".
+  const rawBalance = Number(data?.selectedEntry?.total);
+  const balanceDue = Number.isFinite(rawBalance) ? rawBalance : 0;
+  const isSettled = !(balanceDue > 0);
   const isOverpaid = balanceDue < 0;
 
   useEffect(() => {
@@ -61,9 +93,15 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
         return;
       }
 
+      const config = ENTRY_CONFIG[data?.selectedEntry?.type];
+      if (!config) {
+        toast.error("Unknown billing entry type");
+        return;
+      }
+
       const payload = {
         ...values,
-        totalAmount: data?.selectedEntry?.total,
+        totalAmount: balanceDue,
         patient: data?._id,
         entry: {
           type: data?.selectedEntry?.type,
@@ -72,84 +110,34 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
             data?.selectedEntry?.ipdNumber || data?.selectedEntry?.opdNumber,
         },
       };
-      if (data?.selectedEntry?.type === "Pathology") {
-        const response = await payPatientPathologyBillApi(payload);
 
-        if (response?.success) {
-          const updatedPathology = response?.data?.updatedReport;
+      setSubmitting(true);
+      const response = await config.api(payload);
+      setSubmitting(false);
 
-          setPatient((prev) => ({
-            ...prev,
-            pathologyTestReports: prev.pathologyTestReports.map((testReport) =>
-              String(testReport?._id) === String(updatedPathology?._id)
-                ? { ...updatedPathology }
-                : testReport
-            ),
-          }));
-
-          toast.success("Lab Test Payment recorded successfully");
-        } else {
-          toast.error(response?.message || "Lab Test Payment failed");
-        }
-      }
-      if (data?.selectedEntry?.type === "Medicine") {
-        const response = await payPatientMedicineBillApi(payload);
-
-        if (response?.success) {
-          const updatedOrder = response?.data?.updatedOrder;
-
-          setPatient((prev) => ({
-            ...prev,
-            medicineOrders: prev.medicineOrders.map((order) =>
-              String(order?._id) === String(updatedOrder?._id)
-                ? { ...updatedOrder }
-                : order
-            ),
-          }));
-
-          toast.success("Medicine Payment recorded successfully");
-        } else {
-          toast.error(response?.message || "Medicine Payment failed");
-        }
-      }
-      if (data?.selectedEntry?.type === "OPD") {
-        const response = await payPatientOpdBillApi(payload);
-
-        if (response?.success) {
-          const updatedOpd = response?.data?.updatedOpd;
-
-          setPatient((prev) => ({
-            ...prev,
-            opds: prev.opds.map((opd) =>
-              opd?._id === updatedOpd?._id ? updatedOpd : opd
-            ),
-          }));
-
-          toast.success("OPD Payment recorded successfully");
-        } else {
-          toast.error(response?.message || "OPD Payment failed");
-        }
+      if (!response?.success) {
+        toast.error(response?.message || `${config.label} payment failed`);
+        // The server is the source of truth for what is outstanding. If it
+        // refuses the payment, the figures on screen are stale — refetch the
+        // patient so staff stop looking at a balance the API will not accept.
+        await onRefresh?.();
+        setSelectedEntry(null);
+        return;
       }
 
-      if (data?.selectedEntry?.type === "IPD") {
-        const response = await payPatientIpdBillApi(payload);
-
-        if (response?.success) {
-          const updatedIpd = response?.data?.updatedIpd;
-          setPatient((prev) => ({
-            ...prev,
-            ipds: prev.ipds.map((ipd) =>
-              ipd?._id === updatedIpd?._id ? updatedIpd : ipd
-            ),
-          }));
-          toast.success("IPD Payment recorded successfully");
-        } else {
-          toast.error(response?.message || "IPD Payment failed");
-        }
-      }
-
+      const updated = response?.data?.[config.resultKey];
+      setPatient((prev) => ({
+        ...prev,
+        [config.listKey]: (prev?.[config.listKey] || []).map((item) =>
+          String(item?._id) === String(updated?._id) ? updated : item
+        ),
+      }));
+      toast.success(`${config.label} payment recorded successfully`);
       setSelectedEntry(null);
     } catch (error) {
+      setSubmitting(false);
+      // form.validateFields() rejects with an errorFields object, not an Error
+      if (error?.errorFields?.length) return;
       toast.error(error.message || "Payment failed");
     }
   };
@@ -173,7 +161,21 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
           }
         />
       )}
-      <Form layout="vertical" form={form} onValuesChange={handleValuesChange}>
+      {/*
+        One switch for the whole form. When the entry has nothing outstanding
+        (total 0, or negative = already overpaid) AntD disables every control
+        inside it — Amount Paying, Tax, Discount, Payment Method — so no one can
+        record a payment against a settled bill, and any field added here later
+        is locked automatically instead of having to remember a `disabled` prop.
+        Individual `disabled` props below remain for the cases that are locked
+        even when money IS pending (fixed OPD / lab-test amounts).
+      */}
+      <Form
+        layout="vertical"
+        form={form}
+        onValuesChange={handleValuesChange}
+        disabled={isSettled}
+      >
         <Row gutter={16}>
           <Col md={8} xs={24}>
             <Form.Item label="Pending Amount" name="totalAmount">
@@ -273,7 +275,12 @@ const PayModal = ({ data, setSelectedEntry, setPatient }) => {
 
         <Form.Item>
           <div className="flex justify-end">
-            <Button type="primary" onClick={handlePayment} disabled={isSettled}>
+            <Button
+              type="primary"
+              onClick={handlePayment}
+              disabled={isSettled || submitting}
+              loading={submitting}
+            >
               Pay and Generate Bill
             </Button>
           </div>

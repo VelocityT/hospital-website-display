@@ -71,6 +71,17 @@ const PatientBilling = () => {
     setFetchingDetails(false);
   };
 
+  // Pull the current patient again from the API. Used after a rejected payment
+  // so the screen re-syncs with the server's view of what is outstanding
+  // instead of leaving a stale balance on display.
+  const refreshPatient = async () => {
+    if (!patient?.patientId) return;
+    const res = await getPatientFullDetailsApi({
+      patientId: patient.patientId,
+    });
+    if (res.success) setPatient({ ...res.data });
+  };
+
   const tabs = [
     ...(["admin", "receptionist"].includes(user?.role)
       ? [
@@ -251,6 +262,7 @@ const PatientBilling = () => {
                 }}
                 setSelectedEntry={setSelectedEntry}
                 setPatient={setPatient}
+                onRefresh={refreshPatient}
               />
             </Modal>
           </>

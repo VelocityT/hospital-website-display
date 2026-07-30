@@ -57,10 +57,21 @@ export const payPatientIpdBill = async (req, res) => {
     // otherwise a stale tab or a direct API call produces a negative balance.
     const remainingBalance = totalAmountFromDb - totalChargePaid;
 
+    // On rejection, return the authoritative figures. The client uses these to
+    // correct what it is showing instead of leaving a stale "To be paid" on
+    // screen that the API will never accept.
+    const balanceSnapshot = {
+      days,
+      totalAmount: totalAmountFromDb,
+      paidAmount: totalChargePaid,
+      remainingBalance,
+    };
+
     if (remainingBalance <= 0) {
       return res.status(400).json({
         success: false,
         message: "This IPD bill is already fully paid. Nothing is pending.",
+        data: balanceSnapshot,
       });
     }
 
@@ -68,6 +79,7 @@ export const payPatientIpdBill = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Amount exceeds the pending balance of ₹${remainingBalance}.`,
+        data: balanceSnapshot,
       });
     }
 
@@ -98,8 +110,15 @@ export const payPatientIpdBill = async (req, res) => {
       { _id: getEntry._id, hospital },
       {
         $set: {
+          // NOTE: the discharge date lives on dischargeSummary — reading
+          // `getEntry.dischargeDate` (which does not exist on the schema) made
+          // this condition always false, so an IPD bill could never reach
+          // "Paid" and the Pay button never turned into a Paid tag.
+          // An admitted patient's bill still grows every midnight, so we only
+          // settle the record once the patient is actually discharged.
           "payment.status":
-            doesFullPaymentDone === totalAmountFromDb && getEntry?.dischargeDate
+            doesFullPaymentDone >= totalAmountFromDb &&
+            getEntry?.dischargeSummary?.dischargeDate
               ? "Paid"
               : "Pending",
         },
