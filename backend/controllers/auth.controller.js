@@ -751,6 +751,10 @@ export const createOrUpdateHospital = async (req, res) => {
       staffPrefix,
       patientPrefix,
       isDeleted,
+      // Must be destructured explicitly. Everything NOT named here is swept
+      // into `...modules` and written to hospital.modules — leaving it out
+      // would store the print template as if it were a paid module flag.
+      printTemplate,
       ...modules
     } = JSON.parse(req.body.hospitalInfo);
 
@@ -777,6 +781,7 @@ export const createOrUpdateHospital = async (req, res) => {
         isDeleted,
         staffPrefix,
         patientPrefix,
+        ...(printTemplate ? { printTemplate } : {}),
       };
 
       await Hospital.findByIdAndUpdate(hospitalId, updateData, { new: true });
@@ -830,6 +835,7 @@ export const createOrUpdateHospital = async (req, res) => {
       isDeleted,
       staffPrefix,
       patientPrefix,
+      printTemplate: printTemplate || "default",
     });
 
     const staffId = await generateCustomId(newHospital._id, "staff");

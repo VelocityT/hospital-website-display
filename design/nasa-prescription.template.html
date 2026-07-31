@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nasa Hospital — Prescription</title>
+<style>
+  /* ---------------------------------------------------------------
+     NASA HOSPITAL — prescription letterhead (design preview)
+     Brand colours sampled from the client's logo:
+       navy  #2A3A92   teal #0CA19D   red #EB1F28
+     Print rules that matter:
+       - @page margin 0 so the wave bands bleed to the paper edge
+       - all bands are inline SVG, NOT css background-color, so they
+         print even when Chrome's "Background graphics" box is off
+     --------------------------------------------------------------- */
+  @page { size: A4; margin: 0; }
+
+  /* Height of the fixed letterhead / footer when printing.
+     If content ever overlaps the header or footer, adjust ONLY these two. */
+  :root {
+    --header-h: 56mm;
+    --footer-h: 26mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1a1a1a;
+    background: #e9ecef;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 16px auto;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------------- header ---------------- */
+  /* All header parts live in one wrapper so they can be pinned to the top of
+     EVERY printed page as a single fixed block. */
+  .letterhead { flex: none; background: #fff; }
+  .band-top { position: relative; height: 26mm; flex: none; }
+  .band-top svg { display: block; width: 100%; height: 100%; }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 6mm;
+    padding: 0 12mm;
+    margin-top: -6mm;
+    flex: none;
+  }
+  .head__logo { width: 24mm; flex: none; }
+  .head__logo img { width: 100%; display: block; }
+
+  .head__mid { flex: 1; text-align: center; }
+  .head__name {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30pt;
+    font-weight: 700;
+    color: #2A3A92;
+    letter-spacing: .5px;
+    line-height: 1;
+    margin: 0;
+  }
+  .head__addr {
+    margin: 2mm 0 0;
+    font-size: 7.5pt;
+    line-height: 1.45;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: .2px;
+  }
+
+  .head__emg { width: 30mm; flex: none; text-align: center; }
+  .emg__247 {
+    font-family: Georgia, serif;
+    font-size: 22pt;
+    font-weight: 700;
+    line-height: 1;
+    color: #0CA19D;
+  }
+  .emg__247 span { color: #EB1F28; }
+  .emg__label { font-size: 9pt; font-weight: 700; color: #EB1F28; line-height: 1.1; }
+  .emg__label small { display: block; font-size: 7.5pt; color: #2A3A92; letter-spacing: 2px; }
+
+  /* ecg line + rule */
+  .ecg { padding: 0 12mm; margin-top: 1mm; flex: none; }
+  .ecg svg { display: block; width: 100%; height: 7mm; }
+  .rule { height: 1.1mm; background: #2A3A92; margin: 0 0 0 0; flex: none; }
+
+  /* ---------------- body ---------------- */
+  .content {
+    position: relative;
+    flex: 1;
+    padding: 8mm 12mm 6mm;
+    z-index: 1;
+  }
+
+  .watermark {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 105mm;
+    opacity: .07;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .watermark img { width: 100%; display: block; }
+
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.6mm 10mm;
+    font-size: 9.5pt;
+    margin-bottom: 6mm;
+  }
+  .meta div { display: flex; }
+  .meta b { width: 26mm; font-weight: 600; color: #444; }
+
+  .rx {
+    font-family: Georgia, serif;
+    font-size: 20pt;
+    color: #2A3A92;
+    font-weight: 700;
+    margin: 0 0 3mm;
+  }
+
+  h3.sec {
+    font-size: 10pt;
+    margin: 0 0 2mm;
+    color: #2A3A92;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 6mm; }
+  th {
+    background: #eef1f9;
+    border: .3mm solid #b9c0d8;
+    padding: 1.6mm 2mm;
+    text-align: left;
+    color: #2A3A92;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+  td { border: .3mm solid #c9cede; padding: 1.6mm 2mm; }
+  td.name { font-weight: 600; }
+
+  ul.tests { margin: 0 0 6mm; padding-left: 5mm; font-size: 9.5pt; }
+  ul.tests li { margin-bottom: 1mm; }
+
+  .note {
+    border-left: 1mm solid #0CA19D;
+    background: #f6fbfb;
+    padding: 2.5mm 3mm;
+    font-size: 9.5pt;
+    margin-bottom: 8mm;
+  }
+  .note b { color: #2A3A92; }
+
+  .sign { margin-top: 12mm; text-align: right; font-size: 9.5pt; }
+  .sign__line { display: inline-block; border-top: .4mm solid #555; padding-top: 1.5mm; min-width: 55mm; }
+  .sign__name { font-weight: 700; color: #2A3A92; }
+  .sign__reg { font-size: 8pt; color: #666; }
+
+  /* ---------------- footer ---------------- */
+  .band-bot { position: relative; height: 20mm; flex: none; }
+  .band-bot svg { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .foot__text {
+    position: absolute;
+    bottom: 3.5mm; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10mm;
+    color: #fff;
+    font-size: 8.5pt;
+    font-weight: 600;
+    z-index: 2;
+  }
+
+  @media print {
+    html, body { width: 210mm; margin: 0; padding: 0; background: #fff; }
+
+    /* Drop the flex column. The letterhead and footer become FIXED, which in
+       print means "on every page, at the paper edge" — so the footer can no
+       longer ride up when the content is short, and a long prescription that
+       spills onto page 2 still gets a full letterhead and footer.
+       (min-height:0 here was the bug: it collapsed the 297mm page height.) */
+    .page {
+      display: block;
+      width: 210mm;
+      min-height: 0;
+      margin: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+
+    .letterhead { position: fixed; top: 0; left: 0; right: 0; z-index: 3; }
+    .band-bot   { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3; }
+
+    /* Reserve the space the fixed blocks occupy. */
+    .content {
+      padding-top: var(--header-h);
+      padding-bottom: var(--footer-h);
+    }
+
+    /* Watermark is positioned against .content, which is now the full flow —
+       pin it to the first page instead of drifting to the middle of the run. */
+    .watermark { top: 150mm; }
+
+    /* Never split a medicine row across two pages. */
+    tr, .note, .sign { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+
+    /* Second line of defence for colour fidelity (the bands are SVG, so they
+       print even when Chrome's "Background graphics" box is unticked). */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ===== LETTERHEAD (fixed to the top of every printed page) ===== -->
+  <div class="letterhead">
+
+  <!-- ============ TOP WAVE BAND ============ -->
+  <div class="band-top">
+    <svg viewBox="0 0 800 100" preserveAspectRatio="none">
+      <path d="M0,0 H800 V34 C640,86 560,4 400,30 C240,56 150,96 0,52 Z" fill="#2A3A92"/>
+      <path d="M0,0 H520 C420,44 300,52 190,74 C120,88 60,80 0,60 Z" fill="#0CA19D"/>
+      <path d="M0,26 C160,74 250,32 400,14 C560,-6 650,54 800,16 L800,0 L0,0 Z" fill="#ffffff"/>
+    </svg>
+  </div>
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <div class="head__logo"><img src="__LOGO__" alt="Nasa Hospital"/></div>
+
+    <div class="head__mid">
+      <h1 class="head__name">NASA HOSPITAL</h1>
+      <p class="head__addr">
+        Plot No. 474/227B Iradat Nagar, Opp. Shia P.G. College<br/>
+        Sitapur Road, Lucknow &ndash; PIN 226020
+      </p>
+    </div>
+
+    <div class="head__emg">
+      <div class="emg__247">24<span>&times;7</span></div>
+      <div class="emg__label">Emergency<small>SERVICES</small></div>
+    </div>
+  </div>
+
+  <!-- ============ ECG LINE ============ -->
+  <div class="ecg">
+    <svg viewBox="0 0 800 40" preserveAspectRatio="none">
+      <path d="M0,20 H300 l12,0 l8,-15 l10,30 l9,-32 l10,32 l8,-15 l14,0 H800"
+            fill="none" stroke="#2A3A92" stroke-width="2.2"/>
+    </svg>
+  </div>
+  <div class="rule"></div>
+
+  </div><!-- /.letterhead -->
+
+  <!-- ============ BODY ============ -->
+  <div class="content">
+    <img class="watermark" src="__LOGO__" alt=""/>
+
+    <div class="meta">
+      <div><b>Date</b><span>31/07/2026 12:40</span></div>
+      <div><b>OPD Number</b><span>OPD-4521XY</span></div>
+      <div><b>Patient ID</b><span>NHP-001</span></div>
+      <div><b>Name</b><span>Kamran Husain</span></div>
+      <div><b>Gender</b><span>Male</span></div>
+      <div><b>DOB</b><span>01/01/1997</span></div>
+      <div><b>Blood Group</b><span>B+</span></div>
+      <div><b>Phone</b><span>7355933272</span></div>
+      <div><b>Doctor</b><span>Dr. Salauddin</span></div>
+      <div><b>Age</b><span>29y 6m 28d</span></div>
+    </div>
+
+    <div class="rx">&#8478;</div>
+
+    <h3 class="sec">Medicines</h3>
+    <table>
+      <thead>
+        <tr><th style="width:34%">Medicine</th><th style="width:20%">Category</th>
+            <th style="width:23%">Dose Interval</th><th style="width:23%">Dose Duration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">Paracetamol 650mg</td><td>Tablet</td><td>1 - 0 - 1</td><td>5 Days</td></tr>
+        <tr><td class="name">Azithromycin 500mg</td><td>Tablet</td><td>0 - 0 - 1</td><td>3 Days</td></tr>
+        <tr><td class="name">Pantoprazole 40mg</td><td>Capsule</td><td>1 - 0 - 0</td><td>7 Days</td></tr>
+        <tr><td class="name">Cough Syrup</td><td>Syrup</td><td>1 - 1 - 1</td><td>5 Days</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Lab Tests</h3>
+    <ul class="tests">
+      <li>Complete Blood Count (CBC)</li>
+      <li>Blood Sugar &mdash; Fasting</li>
+      <li>Widal Test</li>
+    </ul>
+
+    <div class="note">
+      <b>Doctor&rsquo;s Note:</b><br/>
+      Take medicines after food. Plenty of oral fluids. Review after 5 days
+      with the reports. Report immediately if fever crosses 102&deg;F.
+    </div>
+
+    <div class="sign">
+      <div class="sign__line">
+        <div class="sign__name">Dr. Salauddin</div>
+        <div class="sign__reg">MBBS, MD &mdash; Reg. No. UP/12345</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM WAVE BAND ============ -->
+  <div class="band-bot">
+    <svg viewBox="0 0 800 100" preserveAspectRatio="none">
+      <path d="M0,100 H800 V22 C650,-14 560,64 400,70 C240,76 150,26 0,58 Z" fill="#0CA19D"/>
+      <path d="M0,100 H800 V52 C640,96 520,38 360,52 C220,64 120,92 0,74 Z" fill="#2A3A92"/>
+    </svg>
+    <div class="foot__text">
+      <span>Validity for 5 Days</span>
+      <span>Contact: 9984499496, 0522-3194945</span>
+      <span>Not for Medical Legal Purpose</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -34,10 +34,21 @@ const prescriptionSchema = new mongoose.Schema(
         testName: { type: String, required: true },
       },
     ],
+    // WHO TYPED IT (audit trail). Always taken from the JWT, never from the
+    // request body — see prescription.controller.js.
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    // WHO IS PRESCRIBING (the clinical fact that gets printed and signed).
+    // Usually the same as createdBy, but they differ when a receptionist
+    // records a prescription on behalf of the visit's assigned doctor.
+    // Optional: prescriptions created before this field existed have none,
+    // and the print falls back to createdBy.
+    doctor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     note: String,
   },

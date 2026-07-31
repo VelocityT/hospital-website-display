@@ -13,6 +13,19 @@ const PrintPrescription = () => {
 
   if (!patientData) return null;
 
+  // The doctor can arrive from two different places:
+  //  - printing straight after writing a prescription: the editor passes
+  //    `doctorFullName` on the patient payload (nothing is populated yet)
+  //  - printing from patient history: `record` IS the saved prescription, so
+  //    the populated `doctor` (or `createdBy`, for records written before the
+  //    doctor field existed) carries the name.
+  // Falling through these keeps both routes working.
+  const doctorRef = record?.doctor || record?.createdBy || null;
+  const doctorName = patientData?.doctorFullName || doctorRef?.fullName || "";
+  const doctorCredentials = [doctorRef?.qualification, doctorRef?.specialist]
+    .filter(Boolean)
+    .join(", ");
+
   const fieldData = [
     { label: "Date", value: formatDateTime(record?.createdAt) || "-" },
     ...(record?.ipd || record?.opd
@@ -34,8 +47,15 @@ const PrintPrescription = () => {
     },
     { label: "Blood Group", value: patientData.bloodGroup || "-" },
     { label: "Phone", value: patientData?.contact?.phone || "-" },
-    ...(patientData?.doctorFullName
-      ? [{ label: "Doctor", value: patientData.doctorFullName || "-" }]
+    ...(doctorName
+      ? [
+          {
+            label: "Doctor",
+            value: doctorCredentials
+              ? `${doctorName} (${doctorCredentials})`
+              : doctorName,
+          },
+        ]
       : []),
   ];
 

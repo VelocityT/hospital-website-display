@@ -38,6 +38,15 @@ const hospitalSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // Which printed letterhead this hospital uses.
+    // "default" = the generic Velocare header every hospital gets.
+    // Anything else maps to a bespoke template in
+    // frontend/src/pages/printMaterial/templates/index.js — add the key there
+    // first, otherwise the app silently falls back to "default".
+    printTemplate: {
+      type: String,
+      default: "default",
+    },
     staffPrefix: String,
     patientPrefix: String,
     staffCounter: {

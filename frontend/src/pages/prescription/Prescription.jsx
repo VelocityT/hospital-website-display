@@ -193,6 +193,12 @@ const Prescription = ({ edit }) => {
     );
   };
 
+  // Mirrors resolvePrescribingDoctor() on the backend: a logged-in doctor
+  // prescribes as themselves; anyone else (receptionist, admin) is recording
+  // it on behalf of the doctor assigned to the visit. Keeping both sides
+  // identical means the printed name always matches the saved record.
+  const prescribingDoctor = user?.role === "doctor" ? user : doctor;
+
   const handlePrint = async () => {
     const patientDescription = {
       opd: opdNumber,
@@ -203,7 +209,7 @@ const Prescription = ({ edit }) => {
       dob: patient.dob,
       bloodGroup: patient.bloodGroup,
       contact: { phone: patient.contact?.phone },
-      doctorFullName: doctor.fullName,
+      doctorFullName: prescribingDoctor?.fullName,
     };
 
     const data = {
@@ -309,7 +315,7 @@ const Prescription = ({ edit }) => {
             </div>
             <div className="mb-2">
               <Text>
-                <b>Doctor:</b> {doctor?.fullName || "-"}
+                <b>Doctor:</b> {prescribingDoctor?.fullName || "-"}
               </Text>
             </div>
           </Col>

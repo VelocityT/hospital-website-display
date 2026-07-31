@@ -298,6 +298,12 @@ export const getPatientIpdOpdDetails = async (req, res) => {
         { path: "medicines" },
         { path: "labTests" },
         { path: "createdBy", select: "fullName role" },
+        // The prescribing doctor is what gets printed and signed; createdBy is
+        // only the audit trail of who typed it.
+        {
+          path: "doctor",
+          select: "fullName role qualification specialist",
+        },
       ],
     };
 
@@ -600,11 +606,14 @@ export const getPatientFullDetails = async (req, res) => {
           path: "prescriptions",
           match: { medicines: { $exists: true, $not: { $size: 0 } } },
           select:
-            "hospital patient patientType ipd opd note createdAt medicines createdBy",
-          populate: {
-            path: "createdBy",
-            select: "fullName role",
-          },
+            "hospital patient patientType ipd opd note createdAt medicines createdBy doctor",
+          populate: [
+            { path: "createdBy", select: "fullName role" },
+            {
+              path: "doctor",
+              select: "fullName role qualification specialist",
+            },
+          ],
         })
         .lean();
     } else {
@@ -640,11 +649,14 @@ export const getPatientFullDetails = async (req, res) => {
         .populate({
           path: "prescriptions",
           select:
-            "hospital patient patientType ipd opd note createdAt medicines labTests createdBy",
-          populate: {
-            path: "createdBy",
-            select: "fullName role",
-          },
+            "hospital patient patientType ipd opd note createdAt medicines labTests createdBy doctor",
+          populate: [
+            { path: "createdBy", select: "fullName role" },
+            {
+              path: "doctor",
+              select: "fullName role qualification specialist",
+            },
+          ],
         })
         .populate({
           path: "medicineOrders",

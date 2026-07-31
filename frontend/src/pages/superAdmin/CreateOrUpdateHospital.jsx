@@ -1,4 +1,14 @@
-import { Card, Form, Input, Button, Switch, Row, Col, Upload } from "antd";
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Switch,
+  Row,
+  Col,
+  Upload,
+  Select,
+} from "antd";
 import { useEffect, useState } from "react";
 import { UploadOutlined, WarningOutlined } from "@ant-design/icons";
 import { toast } from "react-hot-toast";
@@ -8,6 +18,7 @@ import {
 } from "../../services/apis";
 import { useLocation, useNavigate } from "react-router-dom";
 import useDebounce from "../../hooks/useDebounce";
+import { TEMPLATE_OPTIONS } from "../printMaterial/templates";
 
 const moduleList = [
   "pharmacy",
@@ -305,6 +316,21 @@ const CreateOrUpdateHospital = ({ edit }) => {
                   <PrefixWarning result={prefixCheck?.patientPrefix} />
                 </Col>
               </Row>
+            </Col>
+          </Row>
+
+          <Row gutter={24} className="mt-2">
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item
+                label="Print Letterhead"
+                name="printTemplate"
+                tooltip="Which letterhead this hospital's printed documents use. Bespoke templates are built per client; everyone else uses the Velocare default."
+              >
+                <Select
+                  placeholder="Default (Velocare)"
+                  options={TEMPLATE_OPTIONS}
+                />
+              </Form.Item>
             </Col>
           </Row>
 

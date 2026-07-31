@@ -3,6 +3,48 @@ import Opd from "../models/opd.js";
 import Patient from "../models/patient.js";
 import Prescription from "../models/prescription.js";
 
+/**
+ * Work out which doctor a prescription belongs to.
+ *
+ * - A logged-in doctor prescribes as themselves.
+ * - Anyone else (receptionist, admin) is recording it on behalf of the
+ *   doctor assigned to that visit, so we read it off the OPD/IPD record.
+ * - If neither resolves, returns null and the print simply omits the doctor
+ *   line rather than showing a blank or a wrong name.
+ *
+ * Always scoped by hospital — OPD/IPD numbers come from per-hospital
+ * counters, so an unscoped lookup can match another tenant's visit.
+ */
+const resolvePrescribingDoctor = async ({
+  role,
+  userId,
+  hospital,
+  patientType,
+  opd,
+  ipd,
+}) => {
+  if (role === "doctor") return userId;
+
+  try {
+    if (patientType === "opd" && opd) {
+      const visit = await Opd.findOne({ opdNumber: opd, hospital })
+        .select("doctor")
+        .lean();
+      return visit?.doctor || null;
+    }
+    if (patientType === "ipd" && ipd) {
+      const admission = await Ipd.findOne({ ipdNumber: ipd, hospital })
+        .select("attendingDoctor")
+        .lean();
+      return admission?.attendingDoctor || null;
+    }
+  } catch (e) {
+    // Never block saving a prescription because the doctor lookup failed.
+    return null;
+  }
+  return null;
+};
+
 export const createPrescription = async (req, res) => {
   try {
     const {
@@ -13,12 +55,16 @@ export const createPrescription = async (req, res) => {
       medicines,
       pathologyTests = [],
       note,
-      createdBy,
       edit,
       prescriptionId,
     } = req.body;
 
+    // `createdBy` is deliberately NOT read from the body. This is a clinical
+    // record — the author comes from the authenticated token, otherwise a
+    // caller could attribute a prescription to any doctor they like.
     const hospital = req.authority.hospital;
+    const userId = req.authority._id;
+    const role = req.authority.role;
 
     const labTests = pathologyTests.map((test) => {
       let testName = test.testName;
@@ -42,10 +88,26 @@ export const createPrescription = async (req, res) => {
         });
       }
 
-      // Update the existing prescription
+      // Update the existing prescription.
+      // createdBy is intentionally left alone — the original author of a
+      // clinical record must not change because someone edited it.
       existingPrescription.medicines = medicines;
       existingPrescription.labTests = labTests;
       existingPrescription.note = note;
+
+      // Backfill the doctor on records created before this field existed,
+      // so older prescriptions start printing a doctor name too.
+      if (!existingPrescription.doctor) {
+        existingPrescription.doctor = await resolvePrescribingDoctor({
+          role,
+          userId,
+          hospital,
+          patientType: existingPrescription.patientType,
+          opd: existingPrescription.opd,
+          ipd: existingPrescription.ipd,
+        });
+      }
+
       await existingPrescription.save();
 
       return res.status(200).json({
@@ -55,6 +117,15 @@ export const createPrescription = async (req, res) => {
     }
 
     // If not edit mode, create a new prescription
+    const doctor = await resolvePrescribingDoctor({
+      role,
+      userId,
+      hospital,
+      patientType,
+      opd,
+      ipd,
+    });
+
     const newPrescription = await Prescription.create({
       hospital,
       patientType,
@@ -64,7 +135,8 @@ export const createPrescription = async (req, res) => {
       medicines,
       labTests,
       note,
-      createdBy,
+      createdBy: userId,
+      doctor,
     });
 
     await Patient.findByIdAndUpdate(patient, {
@@ -113,6 +185,7 @@ export const getPatientPrescription = async (req, res) => {
         "patientId fullName dob gender bloodGroup contact.phone"
       )
       .populate("createdBy", "fullName role")
+      .populate("doctor", "fullName role qualification specialist")
       .populate("labTests medicines");
 
     if (!prescription) {
