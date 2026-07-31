@@ -15,6 +15,17 @@ export const registerOrUpdateUser = async (req, res) => {
     const photo = req.file;
     const userData = req.body;
 
+    // This endpoint receives multipart/form-data, so every value arrives as a
+    // string. Normalise the salary fields before they reach Mongoose:
+    // "" cannot be cast to Boolean or Number and would throw a CastError.
+    if ("isSalaried" in userData) {
+      userData.isSalaried =
+        userData.isSalaried === true || userData.isSalaried === "true";
+    }
+    if (userData.monthlySalary === "" || userData.monthlySalary == null) {
+      delete userData.monthlySalary;
+    }
+
     if (userData.edit === "true" && userData?._id) {
       const { _id, edit, password, ...rest } = userData;
 
@@ -266,7 +277,10 @@ export const getUserPayments = async (req, res) => {
       _id: id,
       hospital,
     }).select(
-      "fullName role staffId profilePhoto phone dateOfJoining  ipdCharge opdCharge ipdCommission opdCommission"
+      // isSalaried/monthlySalary are needed here: StaffProfile passes this
+      // record straight into DoctorIpds/DoctorOpds, which hide the commission
+      // "Pay" action for salaried doctors. Omit them and the button reappears.
+      "fullName role staffId profilePhoto phone dateOfJoining ipdCharge opdCharge ipdCommission opdCommission isSalaried monthlySalary"
     );
 
     if (!user) {

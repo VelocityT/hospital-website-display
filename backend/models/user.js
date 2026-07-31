@@ -46,10 +46,20 @@ const userSchema = new mongoose.Schema(
 
     qualification: { type: String },
     specialist: { type: String },
+    // What the PATIENT is billed for this doctor. Applies to every doctor,
+    // salaried or not — salary changes how the doctor is PAID, never what the
+    // hospital charges.
     ipdCharge: { type: Number },
     opdCharge: { type: Number },
+    // Commission-based pay: a % of the above, paid out per visit and recorded
+    // in the OPD/IPD `doctorPayment` array. Ignored when isSalaried is true.
     ipdCommission: { type: Number },
     opdCommission: { type: Number },
+    // Salaried doctors draw a fixed monthly amount instead of per-visit
+    // commission. Their income view shows the salary; commission payouts are
+    // blocked so nobody can be paid twice for the same work.
+    isSalaried: { type: Boolean, default: false },
+    monthlySalary: { type: Number },
     dateOfJoining: { type: Date, default: Date.now },
     workExperience: { type: String },
     note: { type: String },

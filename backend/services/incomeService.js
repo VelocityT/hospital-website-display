@@ -2,6 +2,7 @@ import Bill from "../models/bill.js";
 import Ipd from "../models/ipd.js";
 import Opd from "../models/opd.js";
 import StaffPayment from "../models/staffPayment.js";
+import User from "../models/user.js";
 
 const addOnlyDateStage = (field) => ({
   $addFields: {
@@ -112,6 +113,52 @@ export const getUserIncome = async ({
       },
     };
   } else if (role === "doctor" && authorityId.toString() === id) {
+    // A salaried doctor is paid a fixed monthly amount, not a share of what
+    // each visit billed. Showing them OPD/IPD commission totals would be
+    // meaningless (and alarming) so we return the salary view instead.
+    // Patient billing is untouched — ipdCharge/opdCharge still bill the
+    // patient exactly as before.
+    const doctorProfile = await User.findById(authorityId)
+      .select("isSalaried monthlySalary")
+      .lean();
+
+    if (doctorProfile?.isSalaried) {
+      const [salariedOtherExpense, salariedBonus] = await Promise.all([
+        StaffPayment.aggregate([
+          {
+            $match: {
+              hospital,
+              staff: authorityId,
+              paymentType: "Other Expense",
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        StaffPayment.aggregate([
+          {
+            $match: {
+              hospital,
+              staff: authorityId,
+              paymentType: "Bonus",
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+      ]);
+
+      return {
+        // The client reads this flag to hide the Ipd/Opd income cards.
+        isSalaried: true,
+        Salary: {
+          MonthlySalary: doctorProfile.monthlySalary || 0,
+          OtherExpense: getValue(salariedOtherExpense),
+          Bonus: getValue(salariedBonus),
+        },
+      };
+    }
+
     const [
       todayDoctorIpdIncome,
       totalDoctorIpdIncome,

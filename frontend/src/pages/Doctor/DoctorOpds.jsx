@@ -153,7 +153,9 @@ const DoctorOpds = ({ doctor }) => {
               </span>
             ),
           },
-          ...(user?.role === "admin"
+          // Salaried doctors draw a fixed monthly amount, so per-visit
+          // commission must not be payable — the API rejects it too.
+          ...(user?.role === "admin" && !doctor?.isSalaried
             ? [
                 {
                   title: "Action",

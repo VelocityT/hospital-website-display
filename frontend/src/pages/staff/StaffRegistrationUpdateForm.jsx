@@ -9,6 +9,7 @@ import {
   Row,
   Col,
   Upload,
+  Switch,
 } from "antd";
 import {
   UserOutlined,
@@ -53,6 +54,10 @@ function StaffRegistrationForm({ edit = false }) {
   const { state } = useLocation();
   const staffData = state?.staff || null;
   const role = Form.useWatch("role", form);
+  // Salaried doctors are paid a fixed monthly amount instead of per-visit
+  // commission. IPD/OPD *charges* stay visible either way — those bill the
+  // patient and are unrelated to how the doctor is paid.
+  const isSalaried = Form.useWatch("isSalaried", form);
   const [userFace, setUserFace] = useState(null);
   const [isImageCaptured, setIsImageCaptured] = useState(false);
   const [imageCaptureModal, setImageCaptureModal] = useState(false);
@@ -88,6 +93,11 @@ function StaffRegistrationForm({ edit = false }) {
         if (key === "dob") formData.append("dob", dob);
         else if (key === "dateOfJoining")
           formData.append("dateOfJoining", dateOfJoining);
+        // FormData stringifies everything. An untouched Switch is `undefined`,
+        // which would be sent as "" — and Mongoose cannot cast "" to Boolean.
+        // Send an explicit "true"/"false" instead.
+        else if (key === "isSalaried")
+          formData.append("isSalaried", values[key] ? "true" : "false");
         else formData.append(key, values[key] ?? "");
       }
 
@@ -619,6 +629,51 @@ function StaffRegistrationForm({ edit = false }) {
                     <>
                       <Col xs={24} md={12} lg={8}>
                         <Form.Item
+                          name="isSalaried"
+                          label="Payment Type"
+                          valuePropName="checked"
+                          tooltip="Salaried: the doctor draws a fixed monthly amount and visit commission is disabled. Commission: the doctor earns a % of each IPD/OPD charge. Patient billing is the same either way."
+                        >
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={!!isSalaried}
+                              onChange={(checked) =>
+                                form.setFieldsValue({ isSalaried: checked })
+                              }
+                            />
+                            <span className="text-base">
+                              {isSalaried ? "Salaried" : "Commission based"}
+                            </span>
+                          </div>
+                        </Form.Item>
+                      </Col>
+
+                      {isSalaried && (
+                        <Col xs={24} md={12} lg={8}>
+                          <Form.Item
+                            name="monthlySalary"
+                            label="Monthly Salary"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Monthly Salary is required",
+                              },
+                            ]}
+                          >
+                            <Input
+                              size="large"
+                              type="number"
+                              placeholder="e.g. 60000"
+                              min={0}
+                              addonBefore="₹"
+                              onKeyUp={handleNumericKeyDown}
+                            />
+                          </Form.Item>
+                        </Col>
+                      )}
+
+                      <Col xs={24} md={12} lg={8}>
+                        <Form.Item
                           name="ipdCharge"
                           label="IPD Charge"
                           rules={[
@@ -659,13 +714,21 @@ function StaffRegistrationForm({ edit = false }) {
                         </Form.Item>
                       </Col>
 
-                      <Col xs={24} md={12} lg={8}>
+                      {/* Commission only applies to non-salaried doctors.
+                          Hidden (not deleted) when salaried, so switching back
+                          restores the previously saved percentages. */}
+                      <Col
+                        xs={24}
+                        md={12}
+                        lg={8}
+                        style={isSalaried ? { display: "none" } : undefined}
+                      >
                         <Form.Item
                           name="ipdCommission"
                           label="IPD Commission (%)"
                           rules={[
                             {
-                              required: true,
+                              required: !isSalaried,
                               message: "IPD Commission is required",
                             },
                           ]}
@@ -682,13 +745,18 @@ function StaffRegistrationForm({ edit = false }) {
                         </Form.Item>
                       </Col>
 
-                      <Col xs={24} md={12} lg={8}>
+                      <Col
+                        xs={24}
+                        md={12}
+                        lg={8}
+                        style={isSalaried ? { display: "none" } : undefined}
+                      >
                         <Form.Item
                           name="opdCommission"
                           label="OPD Commission (%)"
                           rules={[
                             {
-                              required: true,
+                              required: !isSalaried,
                               message: "OPD Commission is required",
                             },
                           ]}

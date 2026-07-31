@@ -81,7 +81,19 @@ const IncomeOverview = ({ user }) => {
     );
   };
 
-  const { keys = [], title = "Salary", icon = null } = roleConfig[role] || {};
+  // A salaried doctor earns a fixed monthly amount, not a share of each
+  // visit, so the IPD/OPD income cards are meaningless for them — the API
+  // sends `isSalaried` and omits those figures entirely. Only the salary
+  // section renders. Patient billing is unaffected either way.
+  const isSalariedDoctor = role === "doctor" && income?.isSalaried;
+
+  const {
+    keys: configuredKeys = [],
+    title = "Salary",
+    icon = null,
+  } = roleConfig[role] || {};
+  const keys = isSalariedDoctor ? [] : configuredKeys;
+
   const incomeToday = income?.Today || {};
   const incomeTotal = income?.Total || {};
 
@@ -105,7 +117,8 @@ const IncomeOverview = ({ user }) => {
   };
 
   const SalaryChartData = [
-    ...(role !== "doctor"
+    // Commission-based doctors have no monthly salary line; salaried ones do.
+    ...(role !== "doctor" || isSalariedDoctor
       ? [
           {
             name: "Monthly Salary",

@@ -20,6 +20,35 @@ export const payDoctorCommission = async (req, res) => {
         .json({ success: false, message: "IPD or OPD ID is required" });
     }
 
+    // Salaried doctors draw a fixed monthly amount, so per-visit commission
+    // must not be payable to them — otherwise they get paid twice for the
+    // same work. The UI hides the button, but enforce it here too: a stale
+    // tab or a direct API call would otherwise slip through.
+    const payeeId =
+      staffId ||
+      (ipdId
+        ? (await Ipd.findOne({ _id: ipdId, hospital })
+            .select("attendingDoctor")
+            .lean())?.attendingDoctor
+        : (await Opd.findOne({ _id: opdId, hospital })
+            .select("doctor")
+            .lean())?.doctor);
+
+    if (payeeId) {
+      const payee = await User.findOne({ _id: payeeId, hospital })
+        .select("isSalaried fullName")
+        .lean();
+
+      if (payee?.isSalaried) {
+        return res.status(400).json({
+          success: false,
+          message: `${
+            payee.fullName || "This doctor"
+          } is on a monthly salary, so visit commission cannot be paid. Record it under Staff Payments instead.`,
+        });
+      }
+    }
+
     const paymentEntry = {
       amount,
       paidAt: new Date(),
