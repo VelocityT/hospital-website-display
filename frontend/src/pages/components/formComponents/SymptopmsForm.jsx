@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Card, Row, Col, Form, Select } from "antd";
 import TextArea from "antd/es/input/TextArea";
-import { symptomsData } from "../../../utils/localStorage";
+import { getSymptoms, rememberCustomSymptom } from "../../../utils/symptomsStore";
 
 const SymptomsForm = ({
   form,
@@ -12,13 +12,37 @@ const SymptomsForm = ({
   symptomDescription,
   setSymptomDescription,
 }) => {
+  // Read once per mount from the local cache (seeded from the bundled
+  // catalogue on first ever load — see utils/symptomsStore.js).
+  const symptomsData = useMemo(() => getSymptoms(), []);
+
+  // Symptom options, grouped by body system so a 100+ item list stays
+  // navigable. AntD still searches across every group as the user types.
+  const symptomOptions = useMemo(() => {
+    if (!Array.isArray(symptomsData)) return [];
+    const byCategory = new Map();
+    for (const s of symptomsData) {
+      const cat = s.category || "Other";
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat).push({ label: s.symptom, value: s.symptom });
+    }
+    return Array.from(byCategory, ([label, options]) => ({ label, options }));
+  }, [symptomsData]);
+
   useEffect(() => {
     if (!Array.isArray(symptomsData)) return;
-    const allTitles = symptomsData
-      .filter((data) => selectedSymptoms.includes(data.symptom))
-      .flatMap((data) => data.titles.map((t) => t.title));
+    // De-duplicated: several symptoms share qualifiers such as "Mild", and a
+    // repeated value in a tags Select produces duplicate-key warnings and an
+    // ambiguous selection.
+    const allTitles = [
+      ...new Set(
+        symptomsData
+          .filter((data) => selectedSymptoms.includes(data.symptom))
+          .flatMap((data) => (data.titles || []).map((t) => t.title))
+      ),
+    ];
     setSymptomType(allTitles);
-  }, [selectedSymptoms, setSymptomType]);
+  }, [selectedSymptoms, setSymptomType, symptomsData]);
 
   useEffect(() => {
     if (!Array.isArray(symptomsData)) return;
@@ -32,15 +56,15 @@ const SymptomsForm = ({
       const data = symptomsData.find((s) => s.symptom === symptom);
       if (data) {
         for (const title of selectedTitles) {
-          const found = data.titles.find((t) => t.title === title);
+          const found = (data.titles || []).find((t) => t.title === title);
           if (found) {
-            descriptions.push(`${title}: ${found.description}`);
+            descriptions.push(`${symptom} — ${title}: ${found.description}`);
           }
         }
       }
     }
     setSymptomDescription(descriptions.join("\n"));
-  }, [selectedSymptoms, symptomType, form, setSymptomDescription]);
+  }, [selectedSymptoms, symptomType, form, setSymptomDescription, symptomsData]);
 
   const handleSymptomTypeChange = (titles) => {
     form.setFieldsValue({ symptomType: titles });
@@ -50,14 +74,23 @@ const SymptomsForm = ({
       const data = symptomsData.find((s) => s.symptom === symptom);
       if (data) {
         for (const title of titles) {
-          const found = data.titles.find((t) => t.title === title);
+          const found = (data.titles || []).find((t) => t.title === title);
           if (found) {
-            descriptions.push(`${title}: ${found.description}`);
+            descriptions.push(`${symptom} — ${title}: ${found.description}`);
           }
         }
       }
     }
     setSymptomDescription(descriptions.join("\n"));
+  };
+
+  // The Select runs in `tags` mode, so staff can type a symptom that is not in
+  // the catalogue. Remember it locally so it appears in the dropdown next time
+  // instead of being retyped for every patient.
+  const handleSymptomsChange = (values) => {
+    setSelectedSymptoms(values);
+    const known = new Set(symptomsData.map((s) => s.symptom));
+    values.filter((v) => !known.has(v)).forEach(rememberCustomSymptom);
   };
 
   const handleSymptomDescriptionChange = (e) => {
@@ -81,16 +114,20 @@ const SymptomsForm = ({
             <Select
               mode="tags"
               size="large"
-              placeholder="Select Symptoms"
-              onChange={setSelectedSymptoms}
-              options={
-                Array.isArray(symptomsData)
-                  ? symptomsData.map((s) => ({
-                      label: s.symptom,
-                      value: s.symptom,
-                    }))
-                  : []
+              placeholder="Type to search symptoms"
+              onChange={handleSymptomsChange}
+              options={symptomOptions}
+              // A long grouped list needs real search, and virtual scrolling
+              // keeps it smooth on the low-end desktops at reception.
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                (option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
+              maxTagCount="responsive"
+              listHeight={320}
             />
           </Form.Item>
         </Col>
@@ -108,12 +145,20 @@ const SymptomsForm = ({
             <Select
               mode="tags"
               size="large"
-              placeholder="Select Symptoms"
+              placeholder={
+                selectedSymptoms?.length
+                  ? "Select type / severity"
+                  : "Select a symptom first"
+              }
               options={symptomType.map((t) => ({
                 label: t,
                 value: t,
               }))}
               onChange={handleSymptomTypeChange}
+              showSearch
+              optionFilterProp="label"
+              maxTagCount="responsive"
+              listHeight={320}
             />
           </Form.Item>
         </Col>

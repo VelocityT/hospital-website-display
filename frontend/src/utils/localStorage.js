@@ -85,29 +85,11 @@ export const beds = [
   { label: "Bed 201", value: "bed201" },
 ];
 
-export const symptomsData = [
-  {
-    symptom: "Fever",
-    titles: [
-      { title: "Low", description: "Low grade fever below 100°F." },
-      { title: "High", description: "High fever above 102°F." },
-    ],
-  },
-  {
-    symptom: "Cough",
-    titles: [
-      { title: "Dry", description: "Dry cough without mucus." },
-      { title: "Wet", description: "Cough with mucus and congestion." },
-    ],
-  },
-  {
-    symptom: "Headache",
-    titles: [
-      { title: "Mild", description: "Mild pain." },
-      { title: "Severe", description: "Severe pulsing pain." },
-    ],
-  },
-];
+// The symptom catalogue moved to utils/symptomsCatalog.js (100+ symptoms with
+// per-symptom types). Re-exported here so any existing
+// `import { symptomsData } from "utils/localStorage"` keeps working.
+// New code should read it through utils/symptomsStore.js instead.
+export { symptomsData } from "./symptomsCatalog";
 
 export const units = [
   { code: "PCS", description: "Pieces" },
