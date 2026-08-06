@@ -326,6 +326,51 @@ const SidebarMenu = ({ collapsed, setCollapsed, user }) => {
         label: <Link to="/pathology">Pathology</Link>,
       },
     ],
+    // ---------- Ophthalmology roles ----------
+    // Both are gated on the module that pays for them, exactly like every
+    // other entry. A hospital without `ophthalmology`/`opticalShop` should not
+    // be creating these staff accounts in the first place, but if it does the
+    // sidebar degrades to the base menu rather than linking to dead pages.
+    optometrist: [
+      ...baseMenu,
+      ...(hospital?.modules?.ophthalmology
+        ? [
+            {
+              key: "eye-queue",
+              icon: <EyeOutlined size={"1.2rem"} />,
+              label: <Link to="/eye/queue">Eye Queue</Link>,
+            },
+          ]
+        : []),
+      ...(hospital?.modules?.opd
+        ? [
+            {
+              key: "opd-list",
+              icon: <MedicineBoxOutlined size={"1.2rem"} />,
+              label: <Link to="/opd-list">OPD List</Link>,
+            },
+          ]
+        : []),
+    ],
+
+    optician: [
+      ...baseMenu,
+      ...(hospital?.modules?.opticalShop
+        ? [
+            {
+              key: "optical-orders",
+              icon: <ProfileOutlined size={"1.2rem"} />,
+              label: <Link to="/optical/orders">Optical Orders</Link>,
+            },
+            {
+              key: "optical-inventory",
+              icon: <FaGlasses size={"1.2rem"} />,
+              label: <Link to="/optical/inventory">Inventory</Link>,
+            },
+          ]
+        : []),
+    ],
+
     superAdmin: [
       {
         key: "dashboard",

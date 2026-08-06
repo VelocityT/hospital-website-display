@@ -1,0 +1,278 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Nasa Hospital — Bill Preview (long)</title>
+<style>
+@page { size: A4; margin: 0; }
+
+/* Space reserved for the fixed letterhead / footer when printing.
+   If content ever overlaps them, these are the only two numbers to change. */
+.nbp-root { --nbp-header-h: 34mm; --nbp-footer-h: 16mm; }
+
+.nbp-root *, .nbp-root *::before, .nbp-root *::after { box-sizing: border-box; }
+
+.nbp-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #1a1a1a;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------- letterhead ---------------- */
+.nbp-head { flex: none; background: #fff; }
+
+/* Flat banding instead of the prescription's wave: cheaper vertically and
+   reads as a financial document rather than a clinical one. */
+.nbp-bar { height: 4mm; display: flex; }
+.nbp-bar i { display: block; height: 100%; }
+.nbp-bar i:nth-child(1) { width: 62%; background: #2A3A92; }
+.nbp-bar i:nth-child(2) { width: 22%; background: #0CA19D; }
+.nbp-bar i:nth-child(3) { width: 16%; background: #EB1F28; }
+
+.nbp-id {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 6mm; padding: 4mm 12mm 0;
+}
+.nbp-id__name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24pt; font-weight: 700; color: #2A3A92;
+  letter-spacing: .4px; line-height: 1; margin: 0;
+}
+.nbp-id__addr { margin: 1.6mm 0 0; font-size: 7.5pt; line-height: 1.45; color: #444; }
+.nbp-id__right { text-align: right; font-size: 7.5pt; line-height: 1.5; color: #444; white-space: nowrap; }
+.nbp-id__right b { color: #2A3A92; }
+
+.nbp-rule { margin: 3mm 12mm 0; height: .8mm; background: #2A3A92; }
+
+/* ---------------- body ---------------- */
+.nbp-content { flex: 1; padding: 5mm 12mm 4mm; }
+
+/* ---------------- footer ---------------- */
+.nbp-foot { flex: none; }
+.nbp-foot__rule { margin: 0 12mm; height: .5mm; background: #0CA19D; }
+.nbp-foot__text {
+  padding: 1.8mm 12mm 0;
+  display: flex; justify-content: space-between; gap: 6mm;
+  font-size: 7pt; color: #555; line-height: 1.4;
+}
+.nbp-foot__note { font-size: 7pt; color: #777; padding: 1mm 12mm 0; text-align: center; }
+.nbp-foot__band { height: 3mm; display: flex; margin-top: 1.6mm; }
+.nbp-foot__band i { display: block; height: 100%; }
+.nbp-foot__band i:nth-child(1) { width: 16%; background: #EB1F28; }
+.nbp-foot__band i:nth-child(2) { width: 22%; background: #0CA19D; }
+.nbp-foot__band i:nth-child(3) { width: 62%; background: #2A3A92; }
+
+@media print {
+  html, body { width: 210mm; margin: 0; padding: 0; background: #fff; }
+
+  /* Drop the flex column. "fixed", in print media, means "on every page at the
+     paper edge" — so a bill that spills onto page 2 gets a full letterhead and
+     footer there too, and the footer cannot ride up when content is short. */
+  .nbp-page { display: block; width: 210mm; min-height: 0; box-shadow: none; }
+  .nbp-head { position: fixed; top: 0; left: 0; right: 0; z-index: 3; background: #fff; }
+  .nbp-foot { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3; background: #fff; }
+  .nbp-content {
+    padding-top: var(--nbp-header-h);
+    padding-bottom: var(--nbp-footer-h);
+  }
+
+  .nbp-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+
+.nb { color: #1a1a1a; font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 9.5pt; }
+.nb *, .nb *::before, .nb *::after { box-sizing: border-box; }
+
+/* ---- patient / bill meta ---- */
+.nb-meta {
+  display: flex; gap: 8mm; border: 1px solid #2A3A92;
+  padding: 3mm 4mm; margin-bottom: 5mm;
+}
+.nb-meta__col { flex: 1; }
+.nb-meta__col + .nb-meta__col { border-left: 1px dashed #b9c0d8; padding-left: 6mm; }
+.nb-row { display: flex; gap: 2mm; line-height: 1.55; }
+.nb-row__k { min-width: 30mm; font-weight: 600; color: #2A3A92; }
+.nb-row__v { flex: 1; }
+.nb-sub { margin-top: 2.5mm; padding-top: 2mm; border-top: 1px dashed #b9c0d8; }
+.nb-sub__h {
+  font-weight: 700; color: #2A3A92; text-transform: uppercase;
+  font-size: 8pt; letter-spacing: .4px; margin-bottom: 1mm;
+}
+
+/* ---- section headings ---- */
+.nb-title {
+  text-align: center; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: #2A3A92; font-size: 11pt;
+  margin: 6mm 0 2.5mm; padding-bottom: 1mm; border-bottom: 1.5px solid #2A3A92;
+}
+
+/* ---- tables ---- */
+.nb table { width: 100%; border-collapse: collapse; }
+.nb thead th {
+  background: #eef1f9; color: #2A3A92; border-top: 1px solid #2A3A92;
+  border-bottom: 1px solid #2A3A92; text-align: left;
+  padding: 1.8mm 2mm; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .3px;
+}
+.nb tbody td { padding: 1.6mm 2mm; border-bottom: 1px solid #e4e7f0; vertical-align: top; }
+.nb .num { text-align: right; white-space: nowrap; }
+.nb .grp td {
+  font-weight: 700; color: #2A3A92; padding-top: 3mm;
+  border-bottom: 1px solid #c9cede;
+}
+.nb .sub td {
+  font-weight: 700; border-top: 1px solid #c9cede;
+  border-bottom: 1.5px solid #2A3A92; background: #f7f8fc;
+}
+
+/* ---- totals ---- */
+.nb-totals { display: flex; justify-content: flex-end; margin-top: 3mm; }
+.nb-totals__box { min-width: 78mm; }
+.nb-totals__row {
+  display: flex; justify-content: space-between; gap: 8mm;
+  padding: 1.1mm 0; font-size: 9.5pt;
+}
+.nb-totals__row--grand {
+  border-top: 1px solid #2A3A92; border-bottom: 2px solid #2A3A92;
+  margin-top: 1mm; padding: 1.8mm 0; font-weight: 700; color: #2A3A92; font-size: 10.5pt;
+}
+.nb-words {
+  margin-top: 2.5mm; padding: 2mm 3mm; background: #f7f8fc;
+  border-left: 3px solid #0CA19D; font-size: 8.5pt;
+}
+.nb-words b { color: #2A3A92; }
+
+/* ---- signature ---- */
+.nb-sign { display: flex; justify-content: space-between; margin-top: 14mm; font-size: 8.5pt; }
+.nb-sign__box { width: 55mm; text-align: center; }
+.nb-sign__line { border-top: 1px solid #555; padding-top: 1.5mm; }
+
+/* ---- paged output ----
+   A bill with many charges must flow onto page 2 cleanly. The rules below are
+   ordered by what actually goes wrong on a long bill:
+
+   1. thead repeats, so page 2's rows are not an unlabelled wall of numbers.
+   2. No row is ever split in half across the fold.
+   3. A group heading is never the last thing on a page with its lines
+      overleaf, and a Subtotal never lands alone at the top of the next page —
+      an orphaned "Subtotal 14,200.00" under a header the reader cannot see is
+      how billing disputes start.
+   4. The meta block, the totals box and the signature line are atomic.
+   5. Widows/orphans of 2 keep at least two lines of any group together.
+
+   Both the legacy page-break-* and the modern break-* properties are set:
+   Chrome honours the new ones, some print pipelines still only read the old. */
+@media print {
+  .nb thead { display: table-header-group; }
+  .nb tfoot { display: table-footer-group; }
+
+  .nb tr { page-break-inside: avoid; break-inside: avoid; }
+
+  .nb .grp td { page-break-after: avoid; break-after: avoid; }
+  .nb .sub td { page-break-before: avoid; break-before: avoid; }
+
+  .nb-meta,
+  .nb-totals,
+  .nb-words,
+  .nb-sign { page-break-inside: avoid; break-inside: avoid; }
+
+  /* A section heading must never be the last thing on a page. */
+  .nb-title { page-break-after: avoid; break-after: avoid; }
+
+  .nb table { orphans: 2; widows: 2; }
+}
+
+body { margin:0; background:#e9ecf3; }
+@media screen {
+  .nbp-page { box-shadow:0 2px 18px rgba(0,0,0,.18); margin:8mm auto; }
+  /* Screen-only guides showing where A4 pages would break. */
+  .pv-note { max-width:210mm; margin:6mm auto 0; font:12px/1.6 system-ui,sans-serif; color:#444; background:#fff; padding:10px 14px; border-left:4px solid #0CA19D; }
+}
+@media print { body { background:#fff; } .pv-note { display:none; } }
+</style></head><body>
+<div class="pv-note"><b>Preview — long bill (32 line items).</b>
+Press <b>Ctrl+P</b> to see the real pagination: the letterhead and footer repeat on every page,
+the table header repeats, and no group heading or subtotal is left stranded.
+Sample data; totals are computed, not typed.</div>
+<div class="nbp-root"><div class="nbp-page">
+  <div class="nbp-head">
+    <div class="nbp-bar"><i></i><i></i><i></i></div>
+    <div class="nbp-id">
+      <div>
+        <h1 class="nbp-id__name">NASA HOSPITAL</h1>
+        <p class="nbp-id__addr">Plot No. 474/227B Iradat Nagar, Opp. Shia P.G. College, Sitapur Road, Lucknow – 226020</p>
+      </div>
+      <div class="nbp-id__right">
+        <div><b>Ph:</b> 9984499496, 0522-3194945</div>
+        <div><b>24×7</b> Emergency Services</div>
+      </div>
+    </div>
+    <div class="nbp-rule"></div>
+  </div>
+
+  <div class="nbp-content"><div class="nb">
+    <div class="nb-meta">
+      <div class="nb-meta__col">
+        <div class="nb-row"><span class="nb-row__k">Patient UID</span><span class="nb-row__v">NA-018</span></div>
+        <div class="nb-row"><span class="nb-row__k">Name</span><span class="nb-row__v">Ramesh Kumar (Male)</span></div>
+        <div class="nb-row"><span class="nb-row__k">Age</span><span class="nb-row__v">54 years</span></div>
+        <div class="nb-row"><span class="nb-row__k">Address</span><span class="nb-row__v">12 Sitapur Road, Lucknow, 226020</span></div>
+        <div class="nb-row"><span class="nb-row__k">Contact</span><span class="nb-row__v">9403265989</span></div>
+        <div class="nb-sub"><div class="nb-sub__h">Consulting Doctors</div>
+          <div>- Dr. Akshara Raje (General Physician)</div>
+          <div>- Dr. R. Mehrotra (Cardiology)</div></div>
+      </div>
+      <div class="nb-meta__col">
+        <div class="nb-row"><span class="nb-row__k">Bill No</span><span class="nb-row__v">000042</span></div>
+        <div class="nb-row"><span class="nb-row__k">Bill Date</span><span class="nb-row__v">24/01/2026 11:05</span></div>
+        <div class="nb-row"><span class="nb-row__k">Admission No</span><span class="nb-row__v">IPD-000018</span></div>
+        <div class="nb-row"><span class="nb-row__k">Admission Date</span><span class="nb-row__v">18/01/2026 10:30</span></div>
+        <div class="nb-row"><span class="nb-row__k">Discharge Date</span><span class="nb-row__v">— / — / —</span></div>
+        <div class="nb-row"><span class="nb-row__k">Bed No(s)</span><span class="nb-row__v">GENERAL - B-12</span></div>
+        <div class="nb-row"><span class="nb-row__k">Mode</span><span class="nb-row__v">UPI</span></div>
+      </div>
+    </div>
+
+    <div class="nb-title">Provisional Bill</div>
+    <table><thead><tr><th style="width:22%">Primary Code</th><th>Particulars</th><th class="num" style="width:22%">Amount</th></tr></thead>
+    <tbody><tr><td>100000</td><td>Room / Bed Charges</td><td class="num">7200.00</td></tr><tr><td>400000</td><td>Investigation Charges</td><td class="num">4780.00</td></tr><tr><td>450000</td><td>Pharmacy</td><td class="num">11092.50</td></tr><tr><td>500000</td><td>Professional Fees</td><td class="num">5400.00</td></tr></tbody></table>
+
+    <div class="nb-totals"><div class="nb-totals__box">
+      <div class="nb-totals__row"><span>Total Bill Amount</span><span>28472.50</span></div>
+      <div class="nb-totals__row"><span>Amount Payable</span><span>28472.50</span></div>
+      <div class="nb-totals__row"><span>Amount Paid</span><span>25000.00</span></div>
+      <div class="nb-totals__row nb-totals__row--grand"><span>Balance</span><span>3472.50</span></div>
+    </div></div>
+    <div class="nb-words"><b>Paid amount in words:</b> Twenty Five Thousand Rupees Only</div>
+
+    <div class="nb-title">Detailed Breakup</div>
+    <table><thead><tr><th style="width:12%">Code</th><th style="width:22%">Date &amp; Time</th><th>Particulars</th><th class="num" style="width:12%">Rate</th><th class="num" style="width:9%">Units</th><th class="num" style="width:15%">Amount</th></tr></thead>
+    <tbody>
+  <tr class="grp"><td colspan="6">Room / Bed Charges</td></tr>
+  <tr><td>100001</td><td>18/01/2026 10:30</td><td>Bed Charges — GENERAL - B-12</td><td class="num">1200.00</td><td class="num">6</td><td class="num">7200.00</td></tr>
+  <tr class="sub"><td colspan="5" class="num">Subtotal</td><td class="num">7200.00</td></tr>
+  <tr class="grp"><td colspan="6">Investigation Charges</td></tr>
+  <tr><td>400001</td><td>18/01/2026 10:30</td><td>Complete Blood Count (CBC001)</td><td class="num">350.00</td><td class="num">1</td><td class="num">350.00</td></tr><tr><td>400002</td><td>19/01/2026 10:30</td><td>Liver Function Test (LFT002)</td><td class="num">850.00</td><td class="num">1</td><td class="num">850.00</td></tr><tr><td>400003</td><td>19/01/2026 10:30</td><td>Serum Electrolytes (SE004)</td><td class="num">600.00</td><td class="num">1</td><td class="num">600.00</td></tr><tr><td>400004</td><td>20/01/2026 10:30</td><td>Chest X-Ray PA View (XR010)</td><td class="num">450.00</td><td class="num">1</td><td class="num">450.00</td></tr><tr><td>400005</td><td>21/01/2026 10:30</td><td>USG Abdomen (US021)</td><td class="num">1200.00</td><td class="num">1</td><td class="num">1200.00</td></tr><tr><td>400006</td><td>22/01/2026 10:30</td><td>HbA1c (HB007)</td><td class="num">550.00</td><td class="num">1</td><td class="num">550.00</td></tr><tr><td>400007</td><td>23/01/2026 10:30</td><td>Renal Function Test (RFT003)</td><td class="num">780.00</td><td class="num">1</td><td class="num">780.00</td></tr>
+  <tr class="sub"><td colspan="5" class="num">Subtotal</td><td class="num">4780.00</td></tr>
+  <tr class="grp"><td colspan="6">Pharmacy</td></tr>
+  <tr><td>450001</td><td>18/01/2026 10:30</td><td>Paracetamol 650mg (Tab)</td><td class="num">12.00</td><td class="num">20</td><td class="num">240.00</td></tr><tr><td>450002</td><td>19/01/2026 10:30</td><td>Amoxicillin 500mg (Cap)</td><td class="num">25.50</td><td class="num">21</td><td class="num">535.50</td></tr><tr><td>450003</td><td>20/01/2026 10:30</td><td>Pantoprazole 40mg (Vial)</td><td class="num">48.00</td><td class="num">10</td><td class="num">480.00</td></tr><tr><td>450004</td><td>21/01/2026 10:30</td><td>Ondansetron 4mg (Amp)</td><td class="num">22.00</td><td class="num">12</td><td class="num">264.00</td></tr><tr><td>450005</td><td>22/01/2026 10:30</td><td>Ceftriaxone 1g (Vial)</td><td class="num">165.00</td><td class="num">14</td><td class="num">2310.00</td></tr><tr><td>450006</td><td>23/01/2026 10:30</td><td>Normal Saline 500ml (Bottle)</td><td class="num">45.00</td><td class="num">18</td><td class="num">810.00</td></tr><tr><td>450007</td><td>18/01/2026 10:30</td><td>Ringer Lactate 500ml (Bottle)</td><td class="num">52.00</td><td class="num">9</td><td class="num">468.00</td></tr><tr><td>450008</td><td>19/01/2026 10:30</td><td>Metronidazole 100ml (Bottle)</td><td class="num">38.00</td><td class="num">8</td><td class="num">304.00</td></tr><tr><td>450009</td><td>20/01/2026 10:30</td><td>Diclofenac 75mg (Amp)</td><td class="num">18.00</td><td class="num">10</td><td class="num">180.00</td></tr><tr><td>450010</td><td>21/01/2026 10:30</td><td>Ranitidine 50mg (Amp)</td><td class="num">14.00</td><td class="num">11</td><td class="num">154.00</td></tr><tr><td>450011</td><td>22/01/2026 10:30</td><td>Tramadol 50mg (Amp)</td><td class="num">30.00</td><td class="num">7</td><td class="num">210.00</td></tr><tr><td>450012</td><td>23/01/2026 10:30</td><td>Enoxaparin 40mg (Syringe)</td><td class="num">320.00</td><td class="num">6</td><td class="num">1920.00</td></tr><tr><td>450013</td><td>18/01/2026 10:30</td><td>Insulin Human (Vial)</td><td class="num">280.00</td><td class="num">3</td><td class="num">840.00</td></tr><tr><td>450014</td><td>19/01/2026 10:30</td><td>Furosemide 20mg (Amp)</td><td class="num">16.00</td><td class="num">9</td><td class="num">144.00</td></tr><tr><td>450015</td><td>20/01/2026 10:30</td><td>Hydrocortisone 100mg (Vial)</td><td class="num">95.00</td><td class="num">5</td><td class="num">475.00</td></tr><tr><td>450016</td><td>21/01/2026 10:30</td><td>Multivitamin (Tab)</td><td class="num">8.00</td><td class="num">24</td><td class="num">192.00</td></tr><tr><td>450017</td><td>22/01/2026 10:30</td><td>Cetirizine 10mg (Tab)</td><td class="num">6.00</td><td class="num">14</td><td class="num">84.00</td></tr><tr><td>450018</td><td>23/01/2026 10:30</td><td>Azithromycin 500mg (Tab)</td><td class="num">42.00</td><td class="num">6</td><td class="num">252.00</td></tr><tr><td>450019</td><td>18/01/2026 10:30</td><td>Syringe 5ml (Piece)</td><td class="num">7.00</td><td class="num">40</td><td class="num">280.00</td></tr><tr><td>450020</td><td>19/01/2026 10:30</td><td>IV Cannula 20G (Piece)</td><td class="num">35.00</td><td class="num">6</td><td class="num">210.00</td></tr><tr><td>450021</td><td>20/01/2026 10:30</td><td>Surgical Gloves (Pair)</td><td class="num">18.00</td><td class="num">30</td><td class="num">540.00</td></tr><tr><td>450022</td><td>21/01/2026 10:30</td><td>Cotton Roll (Roll)</td><td class="num">25.00</td><td class="num">8</td><td class="num">200.00</td></tr>
+  <tr class="sub"><td colspan="5" class="num">Subtotal</td><td class="num">11092.50</td></tr>
+  <tr class="grp"><td colspan="6">Professional Fees</td></tr>
+  <tr><td>500001</td><td>18/01/2026 10:30</td><td>Consultation — Dr. Akshara Raje</td><td class="num">600.00</td><td class="num">6</td><td class="num">3600.00</td></tr><tr><td>500002</td><td>20/01/2026 10:30</td><td>Consultation — Dr. R. Mehrotra (Cardiology)</td><td class="num">900.00</td><td class="num">2</td><td class="num">1800.00</td></tr>
+  <tr class="sub"><td colspan="5" class="num">Subtotal</td><td class="num">5400.00</td></tr></tbody></table>
+
+    <div class="nb-sign">
+      <div class="nb-sign__box"><div class="nb-sign__line">Patient / Attendant</div></div>
+      <div class="nb-sign__box"><div class="nb-sign__line">Authorised Signatory</div></div>
+    </div>
+  </div></div>
+
+  <div class="nbp-foot">
+    <div class="nbp-foot__rule"></div>
+    <div class="nbp-foot__text"><span>Please retain this bill for insurance and reimbursement claims.</span><span>Subject to Lucknow jurisdiction</span></div>
+    <div class="nbp-foot__note">This is a computer-generated bill. Charges shown are provisional until discharge.</div>
+    <div class="nbp-foot__band"><i></i><i></i><i></i></div>
+  </div>
+</div></div></body></html>

@@ -14,6 +14,7 @@ import {
   ExperimentOutlined,
 } from "@ant-design/icons";
 import { MdSupervisedUserCircle } from "react-icons/md";
+import { FaEye, FaGlasses } from "react-icons/fa";
 import { setHospital } from "../../redux/hospitalSlice";
 
 const { Title } = Typography;
@@ -48,6 +49,20 @@ const roles = [
     key: "pathologist",
     icon: <ExperimentOutlined />,
     label: "Pathologist",
+  },
+  // Ophthalmology roles. Login sends `role` and the API does
+  // User.findOne({ email, role }) — so a role with no tile here cannot sign in
+  // at all, no matter that the User model accepts it. These two run the eye
+  // workflow (workup) and the optical shop, so they must be selectable.
+  {
+    key: "optometrist",
+    icon: <FaEye />,
+    label: "Optometrist",
+  },
+  {
+    key: "optician",
+    icon: <FaGlasses />,
+    label: "Optician",
   },
 ];
 

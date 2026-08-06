@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { getIncomeOverviewForDashApi } from "../../services/apis";
 
 const { RangePicker } = DatePicker;
@@ -46,6 +47,7 @@ const IncomeOverview = ({ user }) => {
   const [income, setIncome] = useState({});
   const [salary, setSalary] = useState({});
   const navigate = useNavigate();
+  const hospital = useSelector((state) => state?.hospital);
   const role = user?.role?.toLowerCase();
 
   const fetchIncome = async (startDate = null, endDate = null) => {
@@ -92,7 +94,19 @@ const IncomeOverview = ({ user }) => {
     title = "Salary",
     icon = null,
   } = roleConfig[role] || {};
-  const keys = isSalariedDoctor ? [] : configuredKeys;
+
+  // Eye revenue is only shown to hospitals that bought the modules — a general
+  // hospital should not get two permanently-zero cards. superAdmin has no
+  // hospital, so `modules` can be undefined: keep the optional chaining.
+  const adminExtraKeys =
+    role === "admin"
+      ? [
+          ...(hospital?.modules?.opticalShop ? ["Optical"] : []),
+          ...(hospital?.modules?.ot ? ["Surgery"] : []),
+        ]
+      : [];
+
+  const keys = isSalariedDoctor ? [] : [...configuredKeys, ...adminExtraKeys];
 
   const incomeToday = income?.Today || {};
   const incomeTotal = income?.Total || {};
@@ -107,6 +121,10 @@ const IncomeOverview = ({ user }) => {
         return "#FBBF24"; // yellow
       case "Pharmacy":
         return "#F87171"; // red
+      case "Optical":
+        return "#22D3EE"; // cyan
+      case "Surgery":
+        return "#C084FC"; // violet
       case "Paid":
         return "#34D399"; // green
       case "Unpaid":

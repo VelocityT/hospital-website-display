@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import {
   FaBox,
   FaCapsules,
+  FaEye,
+  FaGlasses,
   FaPills,
   FaProcedures,
   FaStethoscope,
@@ -31,6 +33,9 @@ const Dashboard = () => {
   const [lowStockMedicines, setLowStockMedicines] = useState([]);
   const [pathologyStats, setPathologyStats] = useState({});
   const [staffs, setStaffs] = useState({});
+  const [eyeStats, setEyeStats] = useState({});
+  const [opticalStats, setOpticalStats] = useState({});
+  const [lowStockOptical, setLowStockOptical] = useState([]);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -54,6 +59,11 @@ const Dashboard = () => {
           });
         } else if (user?.role === "pathologist") {
           setPathologyStats(res?.data || {});
+        } else if (user?.role === "optometrist") {
+          setEyeStats(res?.data?.eyeQueue || {});
+        } else if (user?.role === "optician") {
+          setOpticalStats(res?.data?.opticalOrders || {});
+          setLowStockOptical(res?.data?.stock?.lowStock || []);
         }
       } else {
         toast.error(res.message || "Failed to fetch dashboard stats");
@@ -213,6 +223,176 @@ const Dashboard = () => {
             </Col>
           ))}
         </Row>
+      </>
+    );
+  }
+
+  if (user?.role === "optometrist") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+          Eye Workup Overview
+        </h2>
+        <Row gutter={[12, 12]}>
+          {[
+            {
+              title: "Pending Workups",
+              count: eyeStats?.pendingToday || 0,
+              hint: "Waiting for refraction today",
+              icon: <FaEye />,
+              navigateTo: "/eye/queue",
+              accent: "text-amber-600 dark:text-amber-400",
+            },
+            {
+              title: "Workups Done Today",
+              count: eyeStats?.workupsToday || 0,
+              total: eyeStats?.workupsTotal,
+              icon: <FaGlasses />,
+              navigateTo: "/eye/queue",
+              accent: "text-green-600 dark:text-green-400",
+            },
+            {
+              title: "Eye Visits Today",
+              count: eyeStats?.visitsToday || 0,
+              icon: <FaUserCheck />,
+              navigateTo: "/eye/queue",
+              accent: "text-blue-600 dark:text-blue-400",
+            },
+          ].map((item, i) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={i}>
+              <Card
+                styles={{ body: { padding: 12 } }}
+                className="relative overflow-hidden hover:shadow-lg hover:shadow-blue-500/40 transition duration-300 ease-in-out cursor-pointer h-full"
+                onClick={() => navigate(item.navigateTo)}
+              >
+                <p className="text-gray-500 dark:text-gray-400 mb-1">
+                  {item.title}
+                </p>
+                <p className={`text-xl font-semibold mb-1 ${item.accent}`}>
+                  {item.count}
+                </p>
+                {item.hint && (
+                  <p className="text-gray-400 dark:text-gray-500 mb-0 text-sm">
+                    {item.hint}
+                  </p>
+                )}
+                {item.total !== undefined && (
+                  <p className="text-gray-400 dark:text-gray-500 mb-0 text-sm">
+                    Total: {item.total}
+                  </p>
+                )}
+                <div className="absolute right-2 bottom-2 text-blue-600 opacity-70 text-[60px] pointer-events-none z-0 max-[275px]:hidden">
+                  {item.icon}
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </>
+    );
+  } else if (user?.role === "optician") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+          Optical Shop Overview
+        </h2>
+        <Row gutter={[12, 12]}>
+          {[
+            {
+              title: "Ready for Delivery",
+              count: opticalStats?.ready || 0,
+              hint: "Call the patient",
+              icon: <FaGlasses />,
+              navigateTo: "/optical/orders",
+              accent: "text-green-600 dark:text-green-400",
+            },
+            {
+              title: "At the Lab",
+              count: opticalStats?.inLab || 0,
+              icon: <FaBox />,
+              navigateTo: "/optical/orders",
+              accent: "text-amber-600 dark:text-amber-400",
+            },
+            {
+              title: "Orders Today",
+              count: opticalStats?.today || 0,
+              total: opticalStats?.total,
+              icon: <FaUserCheck />,
+              navigateTo: "/optical/orders",
+              accent: "text-blue-600 dark:text-blue-400",
+            },
+          ].map((item, i) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={i}>
+              <Card
+                styles={{ body: { padding: 12 } }}
+                className="relative overflow-hidden hover:shadow-lg hover:shadow-blue-500/40 transition duration-300 ease-in-out cursor-pointer h-full"
+                onClick={() => navigate(item.navigateTo)}
+              >
+                <p className="text-gray-500 dark:text-gray-400 mb-1">
+                  {item.title}
+                </p>
+                <p className={`text-xl font-semibold mb-1 ${item.accent}`}>
+                  {item.count}
+                </p>
+                {item.hint && (
+                  <p className="text-gray-400 dark:text-gray-500 mb-0 text-sm">
+                    {item.hint}
+                  </p>
+                )}
+                {item.total !== undefined && (
+                  <p className="text-gray-400 dark:text-gray-500 mb-0 text-sm">
+                    Total: {item.total}
+                  </p>
+                )}
+                <div className="absolute right-2 bottom-2 text-blue-600 opacity-70 text-[60px] pointer-events-none z-0 max-[275px]:hidden">
+                  {item.icon}
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+
+        {lowStockOptical?.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-red-600 mb-4">
+              Low Stock Items
+            </h3>
+            <Table
+              dataSource={lowStockOptical.map((item, index) => ({
+                ...item,
+                key: item._id || index,
+                serial: index + 1,
+              }))}
+              columns={[
+                { title: "S.No", dataIndex: "serial", key: "serial" },
+                { title: "Item", dataIndex: "name", key: "name" },
+                {
+                  title: "Brand",
+                  dataIndex: "brand",
+                  key: "brand",
+                  render: (text) => text || "-",
+                },
+                {
+                  title: "Type",
+                  dataIndex: "itemType",
+                  key: "itemType",
+                  render: (text) => text || "-",
+                },
+                {
+                  title: "Stock",
+                  dataIndex: "currentStock",
+                  key: "currentStock",
+                  render: (text) => (
+                    <span className="text-red-600 font-semibold">{text}</span>
+                  ),
+                },
+              ]}
+              pagination={false}
+              bordered
+              size="small"
+            />
+          </div>
+        )}
       </>
     );
   }

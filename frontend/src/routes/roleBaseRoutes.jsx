@@ -62,6 +62,16 @@ const adminRoutes = [
     path: "/admin/income/Pathology",
     element: <IncomeOverview incomeSource="Pathology" />,
   },
+  // Eye-side revenue. These bills already existed; there was simply no screen
+  // to look at them, so spectacle and surgery income was invisible to owners.
+  {
+    path: "/admin/income/optical",
+    element: <IncomeOverview incomeSource="Optical" />,
+  },
+  {
+    path: "/admin/income/surgery",
+    element: <IncomeOverview incomeSource="Surgery" />,
+  },
   {
     path: "/staff-payments",
     element: <StaffListForPayment />,
@@ -233,6 +243,29 @@ export const roleRoutes = {
     { path: "/ipd/:ipdId", element: <IpdOpdDetails /> },
     { path: "/opd/:opdId", element: <IpdOpdDetails /> },
   ],
+  // ---------- Ophthalmology roles ----------
+  // The optometrist runs the workup: the first clinical step of the eye flow.
+  // They see the queue and the workup form, plus enough patient context to
+  // work from — but not the doctor panel, which is the doctor's diagnosis.
+  optometrist: [
+    ...commonRoutes,
+    { path: "/patients", element: <PatientList /> },
+    { path: "/opd-list", element: <OPDIPDList type="opd" /> },
+    { path: "/opd/:opdId", element: <IpdOpdDetails /> },
+    { path: "/eye/queue", element: <EyeQueue /> },
+    { path: "/eye/workup", element: <EyeWorkup /> },
+  ],
+
+  // The optician runs the optical shop: dispensing against a glasses Rx and
+  // keeping frame/lens stock. No clinical screens.
+  optician: [
+    ...commonRoutes,
+    { path: "/patients", element: <PatientList /> },
+    { path: "/optical/orders", element: <OpticalOrders /> },
+    { path: "/optical/order/new", element: <CreateOpticalOrder /> },
+    { path: "/optical/inventory", element: <OpticalInventory /> },
+  ],
+
   superAdmin: [
     { path: "/dashboard", element: <SuperAdminDashboard /> },
     ...adminRoutes,

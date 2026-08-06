@@ -3,6 +3,27 @@ import Ipd from "../models/ipd.js";
 import Opd from "../models/opd.js";
 import StaffPayment from "../models/staffPayment.js";
 import User from "../models/user.js";
+// Used by the pathologist branch. This import was missing, so every
+// pathologist hitting /user/get-income threw a ReferenceError that the
+// try/catch turned into a generic 500 — the page never worked.
+import pathologyTestReport from "../models/pathologyTestReport.js";
+
+/**
+ * Every revenue-bearing bill type.
+ *
+ * Optical and Surgery were absent here, so spectacle sales and cataract
+ * packages — the two things an eye hospital actually earns from — were
+ * silently excluded from every income figure the owner saw.
+ * Keep this in step with the `entry.type` enum on models/bill.js.
+ */
+const REVENUE_ENTRY_TYPES = [
+  "Ipd",
+  "Opd",
+  "Pathology",
+  "Medicine",
+  "Optical",
+  "Surgery",
+];
 
 const addOnlyDateStage = (field) => ({
   $addFields: {
@@ -45,7 +66,7 @@ export const getUserIncome = async ({
           $match: {
             hospital,
             onlyDate: todayDateStr,
-            "entry.type": { $in: ["Ipd", "Opd", "Pathology", "Medicine"] },
+            "entry.type": { $in: REVENUE_ENTRY_TYPES },
           },
         },
         { $group: { _id: "$entry.type", total: { $sum: "$paidAmount" } } },
@@ -54,7 +75,7 @@ export const getUserIncome = async ({
         {
           $match: {
             hospital,
-            "entry.type": { $in: ["Ipd", "Opd", "Pathology", "Medicine"] },
+            "entry.type": { $in: REVENUE_ENTRY_TYPES },
             ...(dateFilter ? { createdAt: dateFilter } : {}),
           },
         },
@@ -96,8 +117,9 @@ export const getUserIncome = async ({
     ]);
 
     const formatIncomeMap = (data) =>
-      ["Ipd", "Opd", "Pathology", "Medicine"].reduce((acc, key) => {
+      REVENUE_ENTRY_TYPES.reduce((acc, key) => {
         const item = data.find((i) => i._id === key);
+        // "Medicine" is what the bill stores; "Pharmacy" is what staff call it.
         const displayKey = key === "Medicine" ? "Pharmacy" : key;
         acc[displayKey] = item?.total || 0;
         return acc;
@@ -532,8 +554,10 @@ export const getUserIncome = async ({
     income = {
       Today: { Pharmacy: todayPharmacyIncome },
       Total: { Pharmacy: totalPharmacyIncome },
-      SalarySalary: {
-        Monthly: getValue(totalMonthly),
+      // Was "SalarySalary" with a "Monthly" key — neither matched what the
+      // client reads, so the pharmacist's salary card rendered undefined.
+      Salary: {
+        MonthlySalary: getValue(totalMonthly),
         OtherExpense: getValue(totalOtherExpense),
         Bonus: getValue(totalBonus),
       },

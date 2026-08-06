@@ -13,6 +13,9 @@ import MedicineSale from "../models/medicineSaleSchema.js";
 import Medicine from "../models/medicine.js";
 import PathologyTest from "../models/pathologyTest.js";
 import pathologyTestReport from "../models/pathologyTestReport.js";
+import EyeExam from "../models/eyeExam.js";
+import OpticalOrder from "../models/opticalOrder.js";
+import OpticalItem from "../models/opticalItem.js";
 
 export const loginUser = async (req, res) => {
   try {
@@ -349,6 +352,72 @@ export const getDashboardStatsData = async (req, res) => {
             todayPatients,
             totalPatients,
           },
+        },
+      });
+    } else if (role === "optometrist") {
+      // The optometrist's day is the workup queue: how many eye visits are
+      // booked today and how many still need refraction.
+      const [eyeVisitsTodayAgg, workupsTodayAgg, workupsTotal] =
+        await Promise.all([
+          Opd.aggregate([
+            addOnlyDateStage("visitDateTime"),
+            { $match: { hospital, onlyDate: todayDateStr } },
+            { $count: "count" },
+          ]),
+          EyeExam.aggregate([
+            addOnlyDateStage("workup.workupAt"),
+            { $match: { hospital, onlyDate: todayDateStr } },
+            { $count: "count" },
+          ]),
+          EyeExam.countDocuments({ hospital, "workup.workupAt": { $ne: null } }),
+        ]);
+
+      const eyeVisitsToday = eyeVisitsTodayAgg[0]?.count || 0;
+      const workupsToday = workupsTodayAgg[0]?.count || 0;
+
+      return res.status(200).json({
+        success: true,
+        message: "Optometrist dashboard stats fetched successfully.",
+        data: {
+          eyeQueue: {
+            visitsToday: eyeVisitsToday,
+            workupsToday,
+            // Never show a negative backlog if a workup was recorded against a
+            // visit booked on an earlier day.
+            pendingToday: Math.max(eyeVisitsToday - workupsToday, 0),
+            workupsTotal,
+          },
+        },
+      });
+    } else if (role === "optician") {
+      const [ordersTodayAgg, ordersTotal, readyCount, inLabCount, lowStock] =
+        await Promise.all([
+          OpticalOrder.aggregate([
+            addOnlyDateStage("createdAt"),
+            { $match: { hospital, onlyDate: todayDateStr } },
+            { $count: "count" },
+          ]),
+          OpticalOrder.countDocuments({ hospital }),
+          OpticalOrder.countDocuments({ hospital, status: "Ready" }),
+          OpticalOrder.countDocuments({ hospital, status: "Lab" }),
+          OpticalItem.find({ hospital, isDeleted: false })
+            .sort({ currentStock: 1 })
+            .limit(10)
+            .select("name brand itemType currentStock")
+            .lean(),
+        ]);
+
+      return res.status(200).json({
+        success: true,
+        message: "Optician dashboard stats fetched successfully.",
+        data: {
+          opticalOrders: {
+            today: ordersTodayAgg[0]?.count || 0,
+            total: ordersTotal,
+            ready: readyCount,
+            inLab: inLabCount,
+          },
+          stock: { lowStock },
         },
       });
     } else if (role === "superAdmin") {
@@ -703,27 +772,16 @@ export const getIncomeOverview = async (req, res) => {
       });
     }
 
-    const dummyIncome = {
-      Ipd: 12000,
-      Opd: 8000,
-      Pharmacy: 5000,
-      Pathology: 4000,
-    };
-
-    if (incomeSource in dummyIncome) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          [incomeSource]: dummyIncome[incomeSource],
-        },
-        message: `Income data for ${incomeSource}`,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: dummyIncome,
-      message: "Income overview fetched successfully",
+    // Anything that is not admin or doctor has no income overview to see.
+    //
+    // This used to fall through to a hardcoded `dummyIncome` map (Ipd 12000,
+    // Opd 8000, Pharmacy 5000, Pathology 4000) left over from early
+    // development. It returned 200 with invented figures, so any other role
+    // hitting this endpoint saw money that does not exist — the worst possible
+    // failure mode for a financial screen. Fail closed instead.
+    return res.status(403).json({
+      success: false,
+      message: "You are not authorized to view this income overview.",
     });
   } catch (error) {
     return res.status(500).json({

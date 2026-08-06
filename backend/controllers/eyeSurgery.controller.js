@@ -111,7 +111,9 @@ export const updateEyeSurgery = async (req, res) => {
     // creates its own Bill (installment) so we keep a full history with dates,
     // per-payment amounts and the running balance. Status becomes Paid only
     // when the collected total reaches the package cost.
-    if (collectAmount > 0) {
+    const collecting = Number(collectAmount) || 0;
+
+    if (collecting > 0) {
       const tax = Number(req.body.tax) || 0;
       const discount = Number(req.body.discount) || 0;
 
@@ -134,7 +136,44 @@ export const updateEyeSurgery = async (req, res) => {
         0
       );
 
-      const newPaidTotal = alreadyPaid + collectAmount;
+      // ---- Overpayment guard ----
+      // Enforced server-side, independently of the UI, so a stale tab or a
+      // direct API call cannot collect more than the package is worth.
+      // (Same protection IPD and Medicine received in c331d56.)
+      //
+      // Only applies once a package cost exists: a surgery can be advised and
+      // partially collected before counseling has set a price, and blocking
+      // that would stop legitimate advance payments.
+      if (packageCost > 0) {
+        const remainingBalance = Math.max(packageCost - alreadyPaid, 0);
+
+        // On rejection return the authoritative figures so the client can
+        // re-sync rather than keep showing a balance the API will not accept.
+        const balanceSnapshot = {
+          packageCost,
+          paidAmount: alreadyPaid,
+          remainingBalance,
+        };
+
+        if (remainingBalance <= 0) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "This surgery package is already fully paid. Nothing is pending.",
+            data: balanceSnapshot,
+          });
+        }
+
+        if (collecting > remainingBalance) {
+          return res.status(400).json({
+            success: false,
+            message: `Amount exceeds the pending balance of ₹${remainingBalance}.`,
+            data: balanceSnapshot,
+          });
+        }
+      }
+
+      const newPaidTotal = alreadyPaid + collecting;
       // Balance left after this installment (never negative).
       const balanceAfter = packageCost
         ? Math.max(packageCost - newPaidTotal, 0)
@@ -150,10 +189,10 @@ export const updateEyeSurgery = async (req, res) => {
           checkId: surgery.surgeryNumber,
           type: "Surgery",
         },
-        totalCharge: collectAmount, // amount collected in THIS installment
+        totalCharge: collecting, // amount collected in THIS installment
         tax,
         discount,
-        paidAmount: collectAmount + tax - discount,
+        paidAmount: collecting + tax - discount,
         payableAmount: balanceAfter, // remaining balance after this payment
         paymentMethod: paymentMethod || "Cash",
       });
