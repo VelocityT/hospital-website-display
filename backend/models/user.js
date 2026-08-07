@@ -46,6 +46,15 @@ const userSchema = new mongoose.Schema(
 
     qualification: { type: String },
     specialist: { type: String },
+    // How long this doctor's prescription stays valid, in days. Printed in the
+    // letterhead footer ("Validity for N Days") so pharmacies and the patient
+    // know when a re-check is due. Set per doctor because a physician writing
+    // a 3-month chronic regimen and a surgeon writing post-op cover do not
+    // mean the same thing by "valid".
+    //
+    // Defaults to 5 — the value Nasa's printed pad carried before this was
+    // configurable, so existing doctors keep printing exactly what they did.
+    prescriptionValidityDays: { type: Number, default: 5, min: 0 },
     // What the PATIENT is billed for this doctor. Applies to every doctor,
     // salaried or not — salary changes how the doctor is PAID, never what the
     // hospital charges.

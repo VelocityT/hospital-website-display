@@ -47,6 +47,47 @@ const bloodGroups = [
   "Unknown",
 ];
 
+/**
+ * "Required, but 0 is a valid answer."
+ *
+ * Zero was previously unreachable on the charge and commission fields for two
+ * separate reasons, and both had to go:
+ *
+ *  1. `min={1}` on the <input type="number"> is NATIVE browser validation. The
+ *     global Enter-to-submit handler in App.js clicks the submit button, which
+ *     fires a real form submit, so Chrome rejects the value with "must be
+ *     greater than or equal to 1" before React or AntD ever see it. No amount
+ *     of rule-tweaking helps while that attribute says 1.
+ *  2. A bare `required` rule reads a cleared field and a deliberate 0 the same
+ *     way once the value has been through an <input> and FormData, both of
+ *     which stringify.
+ *
+ * And 0 is a real answer: a free consultation, a charity camp, a staff family
+ * member, or a salaried doctor who earns no per-visit commission. Rejecting it
+ * forces staff to type 1 and quietly bill someone a rupee.
+ *
+ * @param {string} label  field name used in the message
+ * @param {number} [max]  optional upper bound (100 for percentages)
+ */
+const requiredAllowingZero = (label, max) => ({
+  validator: (_, value) => {
+    if (value === undefined || value === null || value === "") {
+      return Promise.reject(new Error(`${label} is required`));
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      return Promise.reject(new Error(`${label} must be a number`));
+    }
+    if (n < 0) {
+      return Promise.reject(new Error(`${label} cannot be negative`));
+    }
+    if (max !== undefined && n > max) {
+      return Promise.reject(new Error(`${label} cannot be more than ${max}`));
+    }
+    return Promise.resolve();
+  },
+});
+
 function StaffRegistrationForm({ edit = false }) {
   const navigate = useNavigate();
   const [form] = Form.useForm();
@@ -676,18 +717,13 @@ function StaffRegistrationForm({ edit = false }) {
                         <Form.Item
                           name="ipdCharge"
                           label="IPD Charge"
-                          rules={[
-                            {
-                              required: true,
-                              message: "IPD Charge is required",
-                            },
-                          ]}
+                          rules={[requiredAllowingZero("IPD Charge")]}
                         >
                           <Input
                             size="large"
                             type="number"
                             placeholder="IPD Charge"
-                            min={1}
+                            min={0}
                             onKeyUp={handleNumericKeyDown}
                           />
                         </Form.Item>
@@ -697,18 +733,36 @@ function StaffRegistrationForm({ edit = false }) {
                         <Form.Item
                           name="opdCharge"
                           label="OPD Charge"
-                          rules={[
-                            {
-                              required: true,
-                              message: "OPD Charge is required",
-                            },
-                          ]}
+                          rules={[requiredAllowingZero("OPD Charge")]}
                         >
                           <Input
                             size="large"
                             type="number"
                             placeholder="OPD Charge"
-                            min={1}
+                            min={0}
+                            onKeyUp={handleNumericKeyDown}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      {/* Printed in the prescription footer as
+                          "Validity for N Days". Per doctor because a physician
+                          writing a chronic regimen and a surgeon writing
+                          post-op cover do not mean the same thing by "valid".
+                          Left blank, the server keeps the existing value (or
+                          applies the 5-day default on a new doctor). */}
+                      <Col xs={24} md={12} lg={8}>
+                        <Form.Item
+                          name="prescriptionValidityDays"
+                          label="Prescription Validity"
+                          tooltip="Shown on the printed prescription footer. Leave blank to use the default of 5 days."
+                        >
+                          <Input
+                            size="large"
+                            type="number"
+                            placeholder="e.g. 5"
+                            min={0}
+                            addonAfter="days"
                             onKeyUp={handleNumericKeyDown}
                           />
                         </Form.Item>
@@ -726,12 +780,11 @@ function StaffRegistrationForm({ edit = false }) {
                         <Form.Item
                           name="ipdCommission"
                           label="IPD Commission (%)"
-                          rules={[
-                            {
-                              required: !isSalaried,
-                              message: "IPD Commission is required",
-                            },
-                          ]}
+                          rules={
+                            isSalaried
+                              ? []
+                              : [requiredAllowingZero("IPD Commission", 100)]
+                          }
                         >
                           <Input
                             size="large"
@@ -754,12 +807,11 @@ function StaffRegistrationForm({ edit = false }) {
                         <Form.Item
                           name="opdCommission"
                           label="OPD Commission (%)"
-                          rules={[
-                            {
-                              required: !isSalaried,
-                              message: "OPD Commission is required",
-                            },
-                          ]}
+                          rules={
+                            isSalaried
+                              ? []
+                              : [requiredAllowingZero("OPD Commission", 100)]
+                          }
                         >
                           <Input
                             size="large"

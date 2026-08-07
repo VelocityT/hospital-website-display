@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getPatientDetailsIpdOpdApi } from "../../services/apis";
 import { toast } from "react-hot-toast";
-import { Spin, Button, Card, Row, Descriptions, Divider } from "antd";
+import { Spin, Button, Card, Row, Col, Descriptions, Divider } from "antd";
+import { PrinterOutlined } from "@ant-design/icons";
+import { handleBlankPrescriptionPrint } from "../../utils/printDataHelper";
 import { BillDetailsList } from "../components/billing/ChargeTable";
 import { formatDate, formatDateTime } from "../../utils/helper";
 import { useSelector } from "react-redux";
@@ -63,10 +65,22 @@ const IpdOpdDetails = () => {
 
   return (
     <div className="w-full">
-      <Row justify="end">
-        <Button onClick={() => navigate(-1)} className="mb-4">
-          Back
-        </Button>
+      <Row justify="end" gutter={8} className="mb-4">
+        {/* Blank pad for this visit — patient, visit number and doctor are
+            printed, the consulting area is left empty to write on. */}
+        <Col>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={() =>
+              handleBlankPrescriptionPrint({ patient, visit: details, type })
+            }
+          >
+            Blank Prescription
+          </Button>
+        </Col>
+        <Col>
+          <Button onClick={() => navigate(-1)}>Back</Button>
+        </Col>
       </Row>
 
       <Card

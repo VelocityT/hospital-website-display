@@ -18,6 +18,7 @@ import {
   EditOutlined,
   RetweetOutlined,
   MedicineBoxOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -38,6 +39,7 @@ import SymptomsForm from "../components/formComponents/SymptopmsForm";
 import { useSelector } from "react-redux";
 import useDebounce from "../../hooks/useDebounce";
 import { exportToExcel } from "../../utils/exportToExcel";
+import { handleBlankPrescriptionPrint } from "../../utils/printDataHelper";
 import { FaFileExcel } from "react-icons/fa";
 
 function OPDIPDList({ type }) {
@@ -416,6 +418,28 @@ function OPDIPDList({ type }) {
                   icon={<MedicineBoxOutlined />}
                   onClick={() => handleAddPrescription(record)}
                   title="Add Prescription"
+                />
+              </Col>
+            )}
+          {/* Blank pad: letterhead + patient/visit details, empty middle.
+              Reception prints it and hands it over, so a consulting room does
+              not need its own computer. Available to everyone who works the
+              front desk — the doctor never has to touch the system. */}
+          {["admin", "receptionist", "doctor", "nurse"].includes(user?.role) &&
+            record?.status !== "Discharged" && (
+              <Col>
+                <Button
+                  size="small"
+                  type="default"
+                  icon={<PrinterOutlined />}
+                  onClick={() =>
+                    handleBlankPrescriptionPrint({
+                      patient: record?.patient,
+                      visit: record,
+                      type,
+                    })
+                  }
+                  title="Print blank prescription"
                 />
               </Col>
             )}

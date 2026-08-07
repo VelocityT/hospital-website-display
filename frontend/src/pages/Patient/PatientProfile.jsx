@@ -22,7 +22,10 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getPatientFullDetailsApi } from "../../services/apis";
-import { handlePatientBillPrint } from "../../utils/printDataHelper";
+import {
+  handlePatientBillPrint,
+  handleBlankPrescriptionPrint,
+} from "../../utils/printDataHelper";
 import { useSelector } from "react-redux";
 import { formatDate, formatDateTime } from "../../utils/helper";
 import PatientTestReports from "../components/PatientTestReports";
@@ -451,6 +454,26 @@ const PatientProfile = () => {
                       title: "Symptoms",
                       render: (_, rec) =>
                         (rec.symptoms?.symptomNames || []).join(", "),
+                    },
+                    {
+                      // Letterhead + this visit's details, empty middle for the
+                      // doctor to write on by hand.
+                      title: "Blank Rx",
+                      key: "blankRx",
+                      render: (_, rec) => (
+                        <Button
+                          size="small"
+                          icon={<PrinterOutlined />}
+                          onClick={() =>
+                            handleBlankPrescriptionPrint({
+                              patient,
+                              visit: rec,
+                              type: "opd",
+                            })
+                          }
+                          title="Print blank prescription"
+                        />
+                      ),
                     },
                   ]}
                   expandable={{

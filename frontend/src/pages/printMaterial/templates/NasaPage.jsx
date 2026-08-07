@@ -79,8 +79,13 @@ const CSS = `
   width: 105mm; opacity: .07; z-index: 0; pointer-events: none;
 }
 .nasa-watermark img { width: 100%; display: block; }
-/* keep the shared print components readable on this letterhead */
-.nasa-content > * { position: relative; z-index: 1; }
+/* Keep the shared print components readable on this letterhead.
+   MUST exclude the watermark. This selector has the same specificity as
+   .nasa-watermark but is declared later, so a bare ".nasa-content > *" won
+   the cascade and reset the watermark from absolute back to relative --
+   dropping it into normal flow, where it took up the full height of the logo
+   image and pushed the whole body a hundred-odd millimetres down the page. */
+.nasa-content > *:not(.nasa-watermark) { position: relative; z-index: 1; }
 
 /* ---- harmonise the SHARED prescription body with this letterhead ----
    These target element types inside .nasa-content, so they out-specify
@@ -129,7 +134,35 @@ const CSS = `
 }
 `;
 
-const NasaPage = ({ hospital, children }) => (
+/**
+ * Prescription validity, in days, for the footer.
+ *
+ * Comes from the prescribing doctor (`prescriptionValidityDays`), passed down
+ * as `meta.validityDays` by Print.jsx. Falls back to 5 — the value this pad
+ * carried before it was configurable — so a doctor record predating the field,
+ * or a print path that does not resolve a doctor, still prints something
+ * sensible rather than "Validity for undefined Days".
+ *
+ * 0 is meaningful (no expiry stated), so it must not be swallowed by `||`.
+ */
+const DEFAULT_VALIDITY_DAYS = 5;
+
+const resolveValidity = (meta) => {
+  const raw = meta?.validityDays;
+
+  // Number(null) and Number("") are both 0 — and 0 is MEANINGFUL here, it
+  // prints "No fixed validity". Reject the empty cases explicitly first,
+  // otherwise a doctor record that simply has no value set prints as though
+  // someone deliberately chose to state no expiry.
+  if (raw === null || raw === undefined || raw === "") {
+    return DEFAULT_VALIDITY_DAYS;
+  }
+
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_VALIDITY_DAYS;
+};
+
+const NasaPage = ({ hospital, meta, children }) => (
   <div className="nasa-root">
     <style>{CSS}</style>
 
@@ -198,8 +231,12 @@ const NasaPage = ({ hospital, children }) => (
           <path d="M0,100 H800 V52 C640,96 520,38 360,52 C220,64 120,92 0,74 Z" fill="#2A3A92" />
         </svg>
         <div className="nasa-foot__text">
-          <span>Validity for 5 Days</span>
-          <span>Contact: 9984499496, 0522-3194945</span>
+          <span>
+            {resolveValidity(meta) === 0
+              ? "No fixed validity"
+              : `Validity for ${resolveValidity(meta)} Days`}
+          </span>
+          <span>Contact: {hospital?.phone || "9984499496, 0522-3194945"}</span>
           <span>Not for Medical Legal Purpose</span>
         </div>
       </div>

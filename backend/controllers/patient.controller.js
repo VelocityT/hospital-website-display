@@ -302,7 +302,8 @@ export const getPatientIpdOpdDetails = async (req, res) => {
         // only the audit trail of who typed it.
         {
           path: "doctor",
-          select: "fullName role qualification specialist",
+          select:
+            "fullName role qualification specialist prescriptionValidityDays",
         },
       ],
     };
@@ -314,7 +315,14 @@ export const getPatientIpdOpdDetails = async (req, res) => {
         hospital,
       };
       populateOptions = [
-        { path: "attendingDoctor", select: "fullName ipdCharge" },
+        {
+          path: "attendingDoctor",
+          // qualification/specialist/validity are needed by the printed
+          // prescription header and footer, including the blank pad printed
+          // straight off this visit.
+          select:
+            "fullName ipdCharge qualification specialist prescriptionValidityDays",
+        },
         { path: "attendingNurse", select: "fullName" },
         {
           path: "patient",
@@ -350,7 +358,11 @@ export const getPatientIpdOpdDetails = async (req, res) => {
         hospital,
       };
       populateOptions = [
-        { path: "doctor", select: "fullName opdCharge" },
+        {
+          path: "doctor",
+          select:
+            "fullName opdCharge qualification specialist prescriptionValidityDays",
+        },
         {
           path: "patient",
           select:
@@ -611,7 +623,8 @@ export const getPatientFullDetails = async (req, res) => {
             { path: "createdBy", select: "fullName role" },
             {
               path: "doctor",
-              select: "fullName role qualification specialist",
+              select:
+            "fullName role qualification specialist prescriptionValidityDays",
             },
           ],
         })
@@ -623,7 +636,11 @@ export const getPatientFullDetails = async (req, res) => {
           populate: [
             { path: "bed", select: "bedNumber charge bedType" },
             { path: "ward", select: "name floor type" },
-            { path: "attendingDoctor", select: "fullName role ipdCharge" },
+            {
+              path: "attendingDoctor",
+              select:
+                "fullName role ipdCharge qualification specialist prescriptionValidityDays",
+            },
             { path: "attendingNurse", select: "fullName role" },
             { path: "dischargeSummary.dischargedBy", select: "fullName role" },
             { path: "payment.bill" },
@@ -632,7 +649,11 @@ export const getPatientFullDetails = async (req, res) => {
         .populate({
           path: "opds",
           populate: [
-            { path: "doctor", select: "fullName role opdCharge" },
+            {
+              path: "doctor",
+              select:
+                "fullName role opdCharge qualification specialist prescriptionValidityDays",
+            },
             { path: "payment.bill" },
           ],
         })
@@ -654,7 +675,8 @@ export const getPatientFullDetails = async (req, res) => {
             { path: "createdBy", select: "fullName role" },
             {
               path: "doctor",
-              select: "fullName role qualification specialist",
+              select:
+            "fullName role qualification specialist prescriptionValidityDays",
             },
           ],
         })

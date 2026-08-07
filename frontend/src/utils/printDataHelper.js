@@ -174,6 +174,65 @@ export const handlePatientTestReportPrint = ({ record, patient }) => {
   window.open("/print", "_blank", "noopener,noreferrer");
 };
 
+/**
+ * Print an EMPTY prescription pad for a visit.
+ *
+ * Letterhead, patient details, visit number and doctor are printed; the
+ * consulting area is left blank for the doctor to write by hand. This is what
+ * lets one terminal at reception serve every consulting room.
+ *
+ * Deliberately creates no Prescription record — nothing has been prescribed
+ * yet. If the visit is typed up later it goes through the normal prescription
+ * screen.
+ *
+ * Accepts either an OPD or an IPD visit. `doctor` may be a populated object or
+ * already-flattened fields, because the three screens that offer this button
+ * hold the visit in slightly different shapes.
+ *
+ * @param {Object} patient  patient record
+ * @param {Object} visit    opd or ipd record
+ * @param {"opd"|"ipd"} type
+ */
+export const handleBlankPrescriptionPrint = ({ patient, visit = {}, type }) => {
+  const isIpd = type === "ipd";
+  const doctor = isIpd ? visit?.attendingDoctor : visit?.doctor;
+
+  localStorage.setItem(
+    "printPayload",
+    JSON.stringify({
+      type: "blankPrescription",
+      data: {
+        patient: {
+          patientId: patient?.patientId,
+          fullName: patient?.fullName,
+          gender: patient?.gender,
+          age: patient?.age,
+          phone: patient?.contact?.phone,
+        },
+        visit: {
+          ipd: isIpd,
+          number: isIpd ? visit?.ipdNumber : visit?.opdNumber,
+          date: isIpd ? visit?.admissionDate : visit?.visitDateTime,
+          bed: isIpd
+            ? [visit?.bed?.bedType, visit?.bed?.bedNumber]
+                .filter(Boolean)
+                .join(" - ")
+            : null,
+          doctorName: doctor?.fullName || visit?.doctorFullName || "",
+          doctorQualification: doctor?.qualification,
+          doctorSpecialist: doctor?.specialist,
+          // Drives the "Validity for N Days" footer line. Undefined here means
+          // the template falls back to its own default rather than printing
+          // a blank or NaN.
+          validityDays: doctor?.prescriptionValidityDays,
+        },
+      },
+    })
+  );
+
+  window.open("/print", "_blank", "noopener,noreferrer");
+};
+
 export const handlePatientPrescriptionPrint = ({ record, patient }) => {
   localStorage.setItem(
     "printPayload",

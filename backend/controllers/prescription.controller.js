@@ -185,7 +185,12 @@ export const getPatientPrescription = async (req, res) => {
         "patientId fullName dob gender bloodGroup contact.phone"
       )
       .populate("createdBy", "fullName role")
-      .populate("doctor", "fullName role qualification specialist")
+      .populate(
+        "doctor",
+        // prescriptionValidityDays drives the "Validity for N Days" line in the
+        // printed footer, so it must travel with every prescription fetch.
+        "fullName role qualification specialist prescriptionValidityDays"
+      )
       .populate("labTests medicines");
 
     if (!prescription) {

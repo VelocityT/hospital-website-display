@@ -22,8 +22,36 @@ export const registerOrUpdateUser = async (req, res) => {
       userData.isSalaried =
         userData.isSalaried === true || userData.isSalaried === "true";
     }
-    if (userData.monthlySalary === "" || userData.monthlySalary == null) {
-      delete userData.monthlySalary;
+    // Every Number field on the schema. This endpoint receives
+    // multipart/form-data, so an untouched or hidden input arrives as the empty
+    // string — and Mongoose cannot cast "" to Number, it throws a CastError and
+    // the whole save fails with a generic 500.
+    //
+    // Deleting the key (rather than coercing to 0) is deliberate: it lets the
+    // schema default apply on create and leaves the stored value untouched on
+    // edit. Coercing to 0 would silently wipe a doctor's commission the first
+    // time someone saved the form with that section collapsed.
+    //
+    // A real 0 is preserved — it is a legitimate value (free consultation,
+    // salaried doctor on no commission) and must survive to the database.
+    const NUMERIC_FIELDS = [
+      "ipdCharge",
+      "opdCharge",
+      "ipdCommission",
+      "opdCommission",
+      "monthlySalary",
+      "prescriptionValidityDays",
+    ];
+    for (const field of NUMERIC_FIELDS) {
+      const value = userData[field];
+      if (value === "" || value === null || value === undefined) {
+        delete userData[field];
+      } else if (Number.isNaN(Number(value))) {
+        return res.status(400).json({
+          success: false,
+          message: `${field} must be a number`,
+        });
+      }
     }
 
     if (userData.edit === "true" && userData?._id) {
@@ -242,7 +270,10 @@ export const getStaffForAssign = async (req, res) => {
     }
 
     const staff = await User.find({ hospital, role: staffType }).select(
-      "fullName ipdCharge opdCharge"
+      // prescriptionValidityDays travels with the doctor so a blank prescription
+      // printed straight off a visit can show the right validity in the footer
+      // without a second round trip.
+      "fullName qualification specialist ipdCharge opdCharge prescriptionValidityDays"
     );
 
     return res.status(200).json({
