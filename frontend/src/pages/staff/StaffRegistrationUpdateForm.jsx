@@ -472,7 +472,6 @@ function StaffRegistrationForm({ edit = false }) {
                     <Form.Item
                       name="gender"
                       label="Gender"
-                      rules={[{ required: true, message: "Select gender" }]}
                     >
                       <Select size="large" placeholder="Select Gender">
                         <Option value="Male">Male</Option>
@@ -485,8 +484,10 @@ function StaffRegistrationForm({ edit = false }) {
                     <Form.Item
                       name="dob"
                       label="Date of Birth"
+                      // Optional, but if one IS entered it still cannot be in
+                      // the future — dropping "required" should not let bad
+                      // data through.
                       rules={[
-                        { required: true, message: "Select date of birth" },
                         {
                           validator: (_, value) =>
                             value && value.isAfter(dayjs())
@@ -598,9 +599,6 @@ function StaffRegistrationForm({ edit = false }) {
                     <Form.Item
                       name="currentAddress"
                       label="Current Address"
-                      rules={[
-                        { required: true, message: "Enter current address" },
-                      ]}
                     >
                       <Input.TextArea
                         rows={2}
@@ -614,9 +612,6 @@ function StaffRegistrationForm({ edit = false }) {
                     <Form.Item
                       name="permanentAddress"
                       label="Permanent Address"
-                      rules={[
-                        { required: true, message: "Enter permanent address" },
-                      ]}
                     >
                       <Input.TextArea
                         rows={2}
@@ -646,9 +641,6 @@ function StaffRegistrationForm({ edit = false }) {
                     <Form.Item
                       name="qualification"
                       label="Qualification"
-                      rules={[
-                        { required: true, message: "Enter qualification" },
-                      ]}
                     >
                       <Input
                         size="large"

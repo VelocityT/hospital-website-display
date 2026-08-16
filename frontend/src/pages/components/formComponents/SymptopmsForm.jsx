@@ -101,16 +101,12 @@ const SymptomsForm = ({
     <Card title="Symptoms Details" variant="borderless">
       <Row gutter={16}>
         <Col xs={24} md={12}>
-          <Form.Item
-            label="Select Symptoms"
-            name="symptoms"
-            rules={[
-              {
-                required: true,
-                message: "Please select at least one symptom",
-              },
-            ]}
-          >
+          {/* Optional. A patient can be registered before anyone has taken a
+              history — reception often books the visit first and the symptoms
+              get filled in by the doctor, or not at all for a routine review
+              or a pre-op check. Blocking registration on it just made staff
+              type a placeholder. */}
+          <Form.Item label="Select Symptoms" name="symptoms">
             <Select
               mode="tags"
               size="large"
@@ -132,16 +128,10 @@ const SymptomsForm = ({
           </Form.Item>
         </Col>
         <Col xs={24} md={12}>
-          <Form.Item
-            label="Select Symptom Type"
-            name="symptomType"
-            rules={[
-              {
-                required: true,
-                message: "Please select at least one title",
-              },
-            ]}
-          >
+          {/* Also optional, and necessarily so — the options here are derived
+              from whichever symptoms were chosen, so with no symptom selected
+              there is nothing to pick. */}
+          <Form.Item label="Select Symptom Type" name="symptomType">
             <Select
               mode="tags"
               size="large"
