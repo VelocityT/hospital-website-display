@@ -114,6 +114,23 @@ const CSS = `
 }
 `;
 
+/**
+ * Contact details printed on the BILL only.
+ *
+ * Nasa asked for a billing-specific email and phone. The Hospital record still
+ * holds the account owner's own address, which is what logins, notifications
+ * and every other screen use — so this deliberately does NOT read
+ * hospital.email / hospital.phone, and nothing here writes back to the
+ * database.
+ *
+ * Scope is exactly one document: change these two lines and only the printed
+ * bill changes. The prescription pad, the app and the DB are untouched.
+ */
+const BILL_CONTACT = {
+  email: "nasahospital1@gmail.com",
+  phone: "+91 9984499496",
+};
+
 const NasaBillPage = ({ hospital, children }) => (
   <div className="nbp-root">
     <style>{CSS}</style>
@@ -140,13 +157,11 @@ const NasaBillPage = ({ hospital, children }) => (
 
           <div className="nbp-id__right">
             <div>
-              <b>Ph:</b> {hospital?.phone || "9984499496, 0522-3194945"}
+              <b>Ph:</b> {BILL_CONTACT.phone}
             </div>
-            {hospital?.email && (
-              <div>
-                <b>Email:</b> {hospital.email}
-              </div>
-            )}
+            <div>
+              <b>Email:</b> {BILL_CONTACT.email}
+            </div>
             <div>
               <b>24×7</b> Emergency Services
             </div>

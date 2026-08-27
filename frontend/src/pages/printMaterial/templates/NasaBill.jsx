@@ -45,6 +45,19 @@ const GROUPS = {
 
 const money = (n) => (Number(n) || 0).toFixed(2);
 
+/** Round to paise. Every figure printed on a bill goes through this. */
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+/**
+ * Half a paisa. Anything closer to zero than this IS zero.
+ *
+ * Floating point leaves residue: 1000.10 + 2000.20 - 3000.30 is not exactly 0
+ * in JavaScript, it is about -4.5e-13. Compared with a bare `< 0` that residue
+ * prints "Refund Due 0.00" on a bill the patient has settled exactly — which
+ * is the kind of thing that starts an argument at the counter.
+ */
+const EPSILON = 0.005;
+
 /** Line-item code: group code + position, e.g. 100001, 100002. */
 const lineCode = (groupCode, index) => groupCode + index + 1;
 
@@ -189,7 +202,13 @@ export const buildSections = (entryType, entryData) => {
 
   return sections.map((s) => ({
     ...s,
-    subtotal: s.lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0),
+    // Round each line, then the subtotal, so the printed lines always add up
+    // to the printed subtotal. Summing raw floats and rounding only at the end
+    // can leave a subtotal that is one paisa off the column above it.
+    lines: s.lines.map((l) => ({ ...l, amount: round2(l.amount) })),
+    subtotal: round2(
+      s.lines.reduce((sum, l) => sum + round2(l.amount), 0)
+    ),
   }));
 };
 
@@ -308,22 +327,35 @@ const NasaBill = ({ bill }) => {
   const entryType = bill?.entryType;
 
   const sections = buildSections(entryType, entryData);
-  const totalBillAmount = sections.reduce((sum, s) => sum + s.subtotal, 0);
+  const totalBillAmount = round2(
+    sections.reduce((sum, s) => sum + s.subtotal, 0)
+  );
 
   // The payload narrows payment.bill to the single instalment being printed,
   // so the running total comes from billDetails.paidToDate (summed across all
   // instalments before narrowing). Falling back to this bill alone keeps an
   // older payload rendering rather than showing a blank.
   const thisBill = entryData?.payment?.bill?.[0] || entryData?.payment?.bill;
-  const paidToDate =
+  const paidToDate = round2(
     billDetails?.paidToDate != null
-      ? Number(billDetails.paidToDate)
-      : Number(thisBill?.totalCharge) || 0;
+      ? billDetails.paidToDate
+      : thisBill?.totalCharge
+  );
 
-  const discount = Number(thisBill?.discount) || 0;
-  const tax = Number(thisBill?.tax) || 0;
-  const amountPayable = Math.max(totalBillAmount - discount + tax, 0);
-  const balance = amountPayable - paidToDate;
+  const discount = round2(thisBill?.discount);
+  const tax = round2(thisBill?.tax);
+  const amountPayable = round2(Math.max(totalBillAmount - discount + tax, 0));
+  const balance = round2(amountPayable - paidToDate);
+
+  // Three distinct outcomes, and they must not bleed into each other:
+  //   settled  — collected exactly what was due. Print "Fully Paid", never a
+  //              "Balance 0.00" line and never a refund.
+  //   refund   — genuinely collected MORE than due (legacy data, or an advance
+  //              taken before the final charge came down). Real money owed
+  //              back, so it still has to appear.
+  //   balance  — money outstanding.
+  const isSettled = Math.abs(balance) < EPSILON;
+  const isRefund = balance < -EPSILON;
 
   const age = billDetails?.age;
   const ageText = age
@@ -459,8 +491,17 @@ const NasaBill = ({ bill }) => {
             <span>{money(paidToDate)}</span>
           </div>
           <div className="nb-totals__row nb-totals__row--grand">
-            <span>{balance < 0 ? "Refund Due" : "Balance"}</span>
-            <span>{money(Math.abs(balance))}</span>
+            {isSettled ? (
+              <>
+                <span>Fully Paid</span>
+                <span>&mdash;</span>
+              </>
+            ) : (
+              <>
+                <span>{isRefund ? "Refund Due" : "Balance"}</span>
+                <span>{money(Math.abs(balance))}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

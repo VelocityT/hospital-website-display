@@ -273,7 +273,12 @@ function PatientRegistrationPage({ edit }) {
       formData.append("address[line1]", values.line1 || "");
       formData.append("address[line2]", values.line2 || "");
       formData.append("address[city]", values.city || "");
-      formData.append("address[pincode]", values.pincode);
+      // The `|| ""` matters now that pincode is optional. FormData stringifies
+      // whatever it is given, so a blank field would otherwise be sent as the
+      // literal text "undefined" — which the server turns into Number("undefined")
+      // = NaN, and Mongoose rejects NaN on a Number path with a CastError.
+      // An empty string becomes 0, which is what the other address fields do.
+      formData.append("address[pincode]", values.pincode || "");
 
       formData.append("contact[phone]", values.phone);
       formData.append("contact[email]", values.email || "");
@@ -526,7 +531,6 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="line1"
                   label="Address Line 1"
-                  rules={[{ required: true, message: "Enter Address Line 1" }]}
                 >
                   <Input size="large" placeholder="House No, Street" />
                 </Form.Item>
@@ -547,7 +551,6 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="city"
                   label="City"
-                  rules={[{ required: true, message: "Enter City" }]}
                 >
                   <Input size="large" placeholder="City" />
                 </Form.Item>
@@ -556,11 +559,18 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="pincode"
                   label="Pincode"
+                  // Optional — but a pincode that IS entered must still be six
+                  // digits. This has to be a validator rather than a `pattern`
+                  // rule: a pattern fails on an empty string, so leaving the
+                  // field blank would still block the form.
                   rules={[
-                    { required: true, message: "Enter Pincode" },
                     {
-                      pattern: /^[0-9]{6}$/,
-                      message: "Pincode must be 6 digits",
+                      validator: (_, value) =>
+                        !value || /^[0-9]{6}$/.test(String(value))
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error("Pincode must be 6 digits")
+                            ),
                     },
                   ]}
                 >
@@ -823,7 +833,6 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="line1"
                   label="Address Line 1"
-                  rules={[{ required: true, message: "Enter Address Line 1" }]}
                 >
                   <Input size="large" placeholder="House No, Street" />
                 </Form.Item>
@@ -844,7 +853,6 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="city"
                   label="City"
-                  rules={[{ required: true, message: "Enter City" }]}
                 >
                   <Input size="large" placeholder="City" />
                 </Form.Item>
@@ -853,7 +861,6 @@ function PatientRegistrationPage({ edit }) {
                 <Form.Item
                   name="pincode"
                   label="Pincode"
-                  rules={[{ required: true, message: "Enter Pincode" }]}
                 >
                   <Input
                     size="large"
