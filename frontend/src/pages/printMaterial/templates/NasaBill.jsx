@@ -492,10 +492,9 @@ const NasaBill = ({ bill }) => {
           </div>
           <div className="nb-totals__row nb-totals__row--grand">
             {isSettled ? (
-              <>
-                <span>Fully Paid</span>
-                <span>&mdash;</span>
-              </>
+              <span style={{ width: "100%", textAlign: "center" }}>
+                Fully Paid
+              </span>
             ) : (
               <>
                 <span>{isRefund ? "Refund Due" : "Balance"}</span>
