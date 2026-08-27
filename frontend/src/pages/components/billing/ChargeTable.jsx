@@ -86,6 +86,28 @@ export const IpdChargeTable = ({
                   )}
                   {!print && (
                     <>
+                      {/* Combined receipt — total paid across every
+                          instalment on this admission and what's still due.
+                          Distinct from the printer icon on each instalment
+                          row below, which prints ONLY that one payment. */}
+                      {ipd?.payment?.bill?.length > 0 && (
+                        <Button
+                          size="small"
+                          className="border-blue-600 mr-2 print:hidden"
+                          icon={<PrinterOutlined className="text-blue-600" />}
+                          title="Print combined bill (total paid + balance due)"
+                          onClick={() => {
+                            const allBills = ipd.payment.bill;
+                            const latest = allBills[allBills.length - 1];
+                            handlePatientBillPrint({
+                              record: latest,
+                              ipds: [ipd],
+                              patient,
+                              mode: "collective",
+                            });
+                          }}
+                        />
+                      )}
                       {!isSettled ? (
                         <Button
                           type="primary"
@@ -458,6 +480,28 @@ export const MedicineChargeTable = ({
 
               <Col xs={24} sm={8}>
                 <div className="flex justify-end items-center">
+                  {/* Combined receipt — total paid across every instalment
+                      on this order and what's still due. Distinct from the
+                      printer icon on each instalment row below, which
+                      prints ONLY that one payment. */}
+                  {order?.payment?.bill?.length > 0 && (
+                    <Button
+                      size="small"
+                      className="border-blue-600 mr-2"
+                      icon={<PrinterOutlined className="text-blue-600" />}
+                      title="Print combined bill (total paid + balance due)"
+                      onClick={() => {
+                        const allBills = order.payment.bill;
+                        const latest = allBills[allBills.length - 1];
+                        handlePatientBillPrint({
+                          record: latest,
+                          medicineOrder: [order],
+                          patient,
+                          mode: "collective",
+                        });
+                      }}
+                    />
+                  )}
                   {!isPaid ? (
                     <Button
                       type="primary"

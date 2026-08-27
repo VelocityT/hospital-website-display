@@ -31,6 +31,39 @@ const sumPaid = (bills) =>
     0
   );
 
+/**
+ * Total collected up to and including ONE specific instalment.
+ *
+ * `payment.bill` is pushed in payment order, so array position is
+ * chronological order — no date parsing needed.
+ *
+ * This is what an honest per-instalment receipt needs for its Balance line:
+ * the headline "Amount Paid" on that receipt must be the instalment's own
+ * amount (see `handlePatientBillPrint` below), but the outstanding balance
+ * still has to account for every earlier instalment, or the receipt would
+ * print a balance the patient already partly cleared before this payment.
+ */
+const sumPaidUpTo = (bills, targetBill) => {
+  const arr = Array.isArray(bills) ? bills : bills ? [bills] : [];
+  const idx = arr.findIndex(
+    (b) =>
+      (targetBill?._id && String(b?._id) === String(targetBill._id)) ||
+      (targetBill?.billNumber && b?.billNumber === targetBill.billNumber)
+  );
+  return sumPaid(idx === -1 ? arr : arr.slice(0, idx + 1));
+};
+
+/**
+ * @param {"installment"|"collective"} mode
+ *   installment (default) — the receipt for ONE payment, the thing the
+ *   printer icon on each billing row produces. "Amount Paid" on the page is
+ *   that instalment's own amount, never the running total — printing the
+ *   cumulative figure on a single payment's receipt is what caused a ₹500
+ *   receipt to read "Amount Paid ₹5,000" when two earlier instalments existed.
+ *   collective — the summary receipt, for the "print everything" button at
+ *   the top of the entry. "Amount Paid" IS the running total across every
+ *   instalment collected so far, and it's shown next to what's still due.
+ */
 export const handlePatientBillPrint = ({
   record,
   ipds,
@@ -38,18 +71,25 @@ export const handlePatientBillPrint = ({
   patient,
   testReports,
   medicineOrder,
+  mode = "installment",
 }) => {
   const type = record?.entry?.type;
+  const isCollective = mode === "collective";
   let entryData = null;
   let billDetails = null;
 
   if (type === "Ipd") {
     let ipd = ipds.find((i) => i.ipdNumber === record?.entry?.checkId);
-    const bill = ipd?.payment?.bill?.find(
-      (b) => b.billNumber === record?.billNumber
-    );
-    // Summed before payment.bill is narrowed to the printed instalment.
-    const paidToDate = sumPaid(ipd?.payment?.bill);
+    const allBills = ipd?.payment?.bill || [];
+    const bill =
+      allBills.find((b) => b.billNumber === record?.billNumber) || record;
+
+    const paidToDate = isCollective
+      ? sumPaid(allBills)
+      : sumPaidUpTo(allBills, bill);
+    const amountReceivedNow = isCollective
+      ? paidToDate
+      : Number(bill?.totalCharge) || 0;
 
     ipd = {
       ...ipd,
@@ -66,7 +106,9 @@ export const handlePatientBillPrint = ({
       date: bill?.createdAt,
       ipdNumber: ipd?.ipdNumber,
       patientType: "Ipd",
+      billingMode: mode,
       paidToDate,
+      amountReceivedNow,
       admissionDate: ipd?.admissionDate,
       dischargeDate: ipd?.dischargeSummary?.dischargeDate || null,
       bed: [ipd?.bed?.bedType, ipd?.bed?.bedNumber].filter(Boolean).join(" - "),
@@ -80,7 +122,11 @@ export const handlePatientBillPrint = ({
       ].filter(Boolean),
     };
   } else if (type === "Opd") {
+    // Opd carries a single Bill ref, never an array — one visit, one
+    // payment, so there is no "instalment vs collective" distinction to make
+    // here. amountReceivedNow and paidToDate are always the same figure.
     const opd = opds.find((o) => o.opdNumber === record?.entry?.checkId);
+    const paidToDate = sumPaid(opd?.payment?.bill);
 
     entryData = opd;
     billDetails = {
@@ -89,7 +135,9 @@ export const handlePatientBillPrint = ({
       date: record?.createdAt,
       opdNumber: opd?.opdNumber,
       patientType: "Opd",
-      paidToDate: sumPaid(opd?.payment?.bill),
+      billingMode: mode,
+      paidToDate,
+      amountReceivedNow: paidToDate,
       admissionDate: opd?.visitDateTime,
       paymentMethod: record?.paymentMethod,
       doctors: [
@@ -101,16 +149,33 @@ export const handlePatientBillPrint = ({
     };
   } else if (type === "Pathology") {
     const report = testReports.find((r) => r?._id === record?.entry?.entryId);
+    const allBills = report?.payment?.bill || [];
+    const bill =
+      (Array.isArray(allBills) ? allBills : [allBills]).find(
+        (b) => b?.billNumber === record?.billNumber
+      ) || record;
 
-    entryData = report;
+    const paidToDate = isCollective
+      ? sumPaid(allBills)
+      : sumPaidUpTo(allBills, bill);
+    const amountReceivedNow = isCollective
+      ? paidToDate
+      : Number(bill?.totalCharge) || 0;
+
+    entryData = {
+      ...report,
+      payment: { ...report?.payment, bill: [bill] },
+    };
     billDetails = {
       ...patientBlock(patient),
-      billNumber: record?.billNumber,
-      date: record?.createdAt,
+      billNumber: bill?.billNumber,
+      date: bill?.createdAt,
       opdNumber: report?.opd?.opdNumber,
       ipdNumber: report?.ipd?.ipdNumber,
-      paidToDate: sumPaid(report?.payment?.bill),
-      paymentMethod: record?.paymentMethod,
+      billingMode: mode,
+      paidToDate,
+      amountReceivedNow,
+      paymentMethod: bill?.paymentMethod,
       doctors: [
         report?.reportedBy && { name: report.reportedBy.fullName },
       ].filter(Boolean),
@@ -119,11 +184,16 @@ export const handlePatientBillPrint = ({
     let order = medicineOrder.find(
       (order) => order._id === record?.entry?.entryId
     );
+    const allBills = order?.payment?.bill || [];
+    const bill =
+      allBills.find((b) => b.billNumber === record?.billNumber) || record;
 
-    const bill = order?.payment?.bill?.find(
-      (b) => b.billNumber === record?.billNumber
-    );
-    const paidToDate = sumPaid(order?.payment?.bill);
+    const paidToDate = isCollective
+      ? sumPaid(allBills)
+      : sumPaidUpTo(allBills, bill);
+    const amountReceivedNow = isCollective
+      ? paidToDate
+      : Number(bill?.totalCharge) || 0;
 
     order = {
       ...order,
@@ -136,9 +206,11 @@ export const handlePatientBillPrint = ({
     entryData = order;
     billDetails = {
       ...patientBlock(patient),
-      billNumber: record?.billNumber,
-      date: record?.createdAt,
+      billNumber: bill?.billNumber,
+      date: bill?.createdAt,
+      billingMode: mode,
       paidToDate,
+      amountReceivedNow,
       paymentMethod: bill?.paymentMethod,
     };
   }

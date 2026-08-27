@@ -238,6 +238,10 @@ const CSS = `
   text-transform: uppercase; color: #2A3A92; font-size: 11pt;
   margin: 6mm 0 2.5mm; padding-bottom: 1mm; border-bottom: 1.5px solid #2A3A92;
 }
+.nb-subtitle {
+  text-align: center; font-size: 8pt; color: #666; font-style: italic;
+  margin: -1.5mm 0 3mm;
+}
 
 /* ---- tables ---- */
 .nb table { width: 100%; border-collapse: collapse; }
@@ -342,20 +346,39 @@ const NasaBill = ({ bill }) => {
       : thisBill?.totalCharge
   );
 
+  // What THIS printed document actually collected. On a single-instalment
+  // bill this equals paidToDate. On a later instalment of a multi-payment
+  // IPD/Medicine/Pathology bill it does not — printing paidToDate there would
+  // show a ₹500 receipt as "Amount Paid ₹5,000" because two earlier
+  // instalments already happened. See printDataHelper.js.
+  const amountReceivedNow = round2(
+    billDetails?.amountReceivedNow != null
+      ? billDetails.amountReceivedNow
+      : paidToDate
+  );
+  const billingMode = billDetails?.billingMode || "installment";
+  // Only worth a second line when the two figures actually differ — the
+  // common case (one payment, fully covers it) stays exactly as it always
+  // printed, no extra clutter.
+  const showPaidSplit =
+    billingMode !== "collective" &&
+    Math.abs(amountReceivedNow - paidToDate) > EPSILON;
+
   const discount = round2(thisBill?.discount);
   const tax = round2(thisBill?.tax);
   const amountPayable = round2(Math.max(totalBillAmount - discount + tax, 0));
   const balance = round2(amountPayable - paidToDate);
 
-  // Three distinct outcomes, and they must not bleed into each other:
-  //   settled  — collected exactly what was due. Print "Fully Paid", never a
-  //              "Balance 0.00" line and never a refund.
-  //   refund   — genuinely collected MORE than due (legacy data, or an advance
-  //              taken before the final charge came down). Real money owed
-  //              back, so it still has to appear.
-  //   balance  — money outstanding.
-  const isSettled = Math.abs(balance) < EPSILON;
-  const isRefund = balance < -EPSILON;
+  // Two outcomes on a Nasa bill, not three:
+  //   settled  — paid >= payable. This covers an exact match AND a discount
+  //              applied after payment was already collected (e.g. Total
+  //              5800, Discount 50, Payable 5750, Paid 5800 — the "extra"
+  //              50 is the discount the hospital is absorbing, not money
+  //              owed back to the patient). Nasa does not refund cash at
+  //              the counter for this, so the bill just reads "Fully Paid".
+  //   balance  — paid < payable. Money still outstanding.
+  // "Refund Due" is intentionally not a printed state here.
+  const isSettled = balance <= EPSILON;
 
   const age = billDetails?.age;
   const ageText = age
@@ -434,6 +457,15 @@ const NasaBill = ({ bill }) => {
 
       {/* ---------- summary ---------- */}
       <div className="nb-title">Provisional Bill</div>
+      {billingMode === "collective" ? (
+        <div className="nb-subtitle">
+          Combined Summary &mdash; All Instalments to Date
+        </div>
+      ) : showPaidSplit ? (
+        <div className="nb-subtitle">
+          Instalment Receipt &mdash; Bill No. {billDetails?.billNumber}
+        </div>
+      ) : null}
       <table>
         <thead>
           <tr>
@@ -486,10 +518,23 @@ const NasaBill = ({ bill }) => {
             <span>Amount Payable</span>
             <span>{money(amountPayable)}</span>
           </div>
-          <div className="nb-totals__row">
-            <span>Amount Paid</span>
-            <span>{money(paidToDate)}</span>
-          </div>
+          {showPaidSplit ? (
+            <>
+              <div className="nb-totals__row">
+                <span>Amount Received (This Bill)</span>
+                <span>{money(amountReceivedNow)}</span>
+              </div>
+              <div className="nb-totals__row">
+                <span>Paid To Date (All Instalments)</span>
+                <span>{money(paidToDate)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="nb-totals__row">
+              <span>Amount Paid</span>
+              <span>{money(amountReceivedNow)}</span>
+            </div>
+          )}
           <div className="nb-totals__row nb-totals__row--grand">
             {isSettled ? (
               <span style={{ width: "100%", textAlign: "center" }}>
@@ -497,8 +542,8 @@ const NasaBill = ({ bill }) => {
               </span>
             ) : (
               <>
-                <span>{isRefund ? "Refund Due" : "Balance"}</span>
-                <span>{money(Math.abs(balance))}</span>
+                <span>Balance</span>
+                <span>{money(balance)}</span>
               </>
             )}
           </div>
@@ -506,7 +551,7 @@ const NasaBill = ({ bill }) => {
       </div>
 
       <div className="nb-words">
-        <b>Paid amount in words:</b> {amountInWords(paidToDate)}
+        <b>Paid amount in words:</b> {amountInWords(amountReceivedNow)}
       </div>
 
       {/* ---------- detailed breakup ---------- */}
