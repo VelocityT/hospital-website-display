@@ -13,6 +13,11 @@ const opdVisitSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  // Negotiated consultation charge for THIS visit only — see the matching
+  // field on ipd.js for the full reasoning. null/undefined means "use
+  // doctor.opdCharge as normal". Set from PayModal at billing time, admin
+  // only.
+  doctorChargeOverride: { type: Number, default: null, min: 0 },
   visitDateTime: { type: Date, default: Date.now },
   notes: String,
   symptoms: {

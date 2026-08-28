@@ -248,6 +248,13 @@ function PatientRegistrationPage({ edit }) {
         formData.append("IPD[doctor]", values.doctor);
         formData.append("IPD[nurse]", values.nurse);
         formData.append("IPD[notes]", values.notes || "");
+        // Admin-only field (IPDForm only renders it for admins); empty
+        // string here, never the literal "undefined" FormData would produce
+        // — the backend already treats "" as "no negotiation, use default".
+        formData.append(
+          "IPD[doctorChargeOverride]",
+          values.doctorChargeOverride ?? ""
+        );
       }
 
       if (values.patientType === "OPD" || params.opdId) {

@@ -40,10 +40,34 @@ const ipdAdmissionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  // Negotiated per-day doctor rate for THIS admission only — never touches
+  // attendingDoctor.ipdCharge, so every other patient this doctor sees keeps
+  // billing at the normal rate. null/undefined means "no negotiation, use
+  // the doctor's default ipdCharge". Set at admission time (IPDForm, both
+  // the OPD-to-IPD switch and direct-IPD-intake screens share that form) or
+  // adjusted later from PayModal at billing time — admin only in both
+  // places, since this also changes what the doctor is paid (see
+  // frontend/src/utils/helper.js calculateCommission).
+  doctorChargeOverride: { type: Number, default: null, min: 0 },
   doctorPayment: [
     {
       amount: { type: Number },
       paidAt: { type: Date, default: Date.now },
+    },
+  ],
+  // Ad-hoc surgery / OT charges incurred during this admission. Separate
+  // from the eye-care module's EyeSurgery model (counseling/biometry/OT
+  // board workflow) — this is the lightweight "we did a procedure, charge
+  // for it" version for hospitals that don't run the ophthalmology module.
+  // Added at billing time from the IPD charge screen, or defaults can be
+  // set per-doctor via User.surgeryCharge.
+  surgeryCharges: [
+    {
+      doctor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      procedureName: { type: String, required: true },
+      charge: { type: Number, required: true, min: 0 },
+      date: { type: Date, default: Date.now },
+      notes: String,
     },
   ],
   symptoms: {

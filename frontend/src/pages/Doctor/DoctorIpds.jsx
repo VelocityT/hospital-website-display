@@ -154,13 +154,22 @@ const DoctorIpds = ({ doctor }) => {
                 record.admissionDate,
                 record?.dischargeSummary?.dischargeDate
               );
-              const commissionPerDay =
-                (doctor?.ipdCommission * doctor?.ipdCharge) / 100;
+              // Negotiated rate (record.doctorChargeOverride) replaces
+              // ipdCharge for this admission when one was agreed — same
+              // rule as calculateCommission in utils/helper.js, which this
+              // used to duplicate independently and could drift from.
+              const rate = record?.doctorChargeOverride ?? doctor?.ipdCharge;
+              const commissionPerDay = (doctor?.ipdCommission * rate) / 100;
               const totalCommission = commissionPerDay * days;
               return (
                 <>
                   {commissionPerDay.toFixed(2)} ₹ x {days} day(s) ={" "}
                   <b>{totalCommission.toFixed(2)} ₹</b>
+                  {record?.doctorChargeOverride != null && (
+                    <Tag color="blue" className="ml-2">
+                      Negotiated rate
+                    </Tag>
+                  )}
                 </>
               );
             },

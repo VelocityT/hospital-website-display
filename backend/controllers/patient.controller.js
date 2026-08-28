@@ -8,9 +8,23 @@ import { generateCustomId } from "../utils/generateCustomId.js";
 import pathologyTestReport from "../models/pathologyTestReport.js";
 import mongoose from "mongoose";
 
+// Admin-only negotiated per-admission doctor rate (Ipd.doctorChargeOverride /
+// Opd.doctorChargeOverride — see those schemas for the full reasoning). Any
+// other role's value is silently dropped rather than rejected: none of the
+// intake forms show this field to non-admins, so a non-admin value here
+// would only ever come from someone bypassing the UI, and the safe response
+// to that is "ignore it", not a 403 that interrupts patient registration.
+const resolveDoctorChargeOverride = (raw, role) => {
+  if (role !== "admin" || raw === undefined || raw === "" || raw === null) {
+    return null;
+  }
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
 export const createPatient = async (req, res) => {
   try {
-    const { hospital } = req.authority;
+    const { hospital, role } = req.authority;
 
     const patientData = {
       hospital,
@@ -71,6 +85,10 @@ export const createPatient = async (req, res) => {
         height: Number(req.body.IPD?.height || 0),
         weight: Number(req.body.IPD?.weight || 0),
         bloodPressure: req.body.IPD?.bloodPressure || "",
+        doctorChargeOverride: resolveDoctorChargeOverride(
+          req.body.IPD?.doctorChargeOverride,
+          role
+        ),
         symptoms: {
           symptomNames: extractArray(req.body.symptoms, "symptomNames"),
           symptomType: extractArray(req.body.symptoms, "symptomType"),
@@ -531,7 +549,7 @@ export const updatePatientRegistration = async (req, res) => {
 
 export const switchPatientToIpd = async (req, res) => {
   try {
-    const { hospital } = req.authority;
+    const { hospital, role } = req.authority;
     const patientId = req.params.id;
     const { doctor, bedType, nurse, ...ipdInfo } = req.body;
     const existingIpd = await Ipd.findOne({
@@ -553,6 +571,13 @@ export const switchPatientToIpd = async (req, res) => {
       attendingDoctor: doctor,
       patient: patientId,
       hospital,
+      // Overwrite whatever came through the spread above — ipdInfo is
+      // "everything except doctor/bedType/nurse" from the raw request body,
+      // so a non-admin's request could otherwise smuggle a value in here.
+      doctorChargeOverride: resolveDoctorChargeOverride(
+        ipdInfo.doctorChargeOverride,
+        role
+      ),
     };
 
     const session = await mongoose.startSession();
@@ -644,6 +669,7 @@ export const getPatientFullDetails = async (req, res) => {
             { path: "attendingNurse", select: "fullName role" },
             { path: "dischargeSummary.dischargedBy", select: "fullName role" },
             { path: "payment.bill" },
+            { path: "surgeryCharges.doctor", select: "fullName role" },
           ],
         })
         .populate({
@@ -720,7 +746,7 @@ export const getPatientFullDetails = async (req, res) => {
 
 export const addOpdOrIpd = async (req, res) => {
   try {
-    const { hospital } = req.authority;
+    const { hospital, role } = req.authority;
     const { type, bedType, ...payload } = req.body;
 
     const checkPatient = await Patient.findOne({
@@ -736,7 +762,16 @@ export const addOpdOrIpd = async (req, res) => {
     }
 
     if (type === "ipd" && payload.ipdNumber) {
-      const createdIpd = await Ipd.create({ ...payload, hospital });
+      const createdIpd = await Ipd.create({
+        ...payload,
+        hospital,
+        // Overwrite whatever came through the spread above, same reasoning
+        // as switchPatientToIpd — payload is the raw request body.
+        doctorChargeOverride: resolveDoctorChargeOverride(
+          payload.doctorChargeOverride,
+          role
+        ),
+      });
 
       await Patient.findByIdAndUpdate(payload.patient, {
         $push: { ipds: createdIpd._id },

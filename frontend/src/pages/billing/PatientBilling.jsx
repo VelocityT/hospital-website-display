@@ -94,6 +94,7 @@ const PatientBilling = () => {
                   patient={patient}
                   ipdEntries={patient?.ipds}
                   setSelectedEntry={setSelectedEntry}
+                  onRefresh={refreshPatient}
                 />
               ) : (
                 <div className="text-center py-4 text-gray-500">

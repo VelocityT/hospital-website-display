@@ -39,6 +39,8 @@ export const registerOrUpdateUser = async (req, res) => {
       "opdCharge",
       "ipdCommission",
       "opdCommission",
+      "surgeryCharge",
+      "surgeryCommission",
       "monthlySalary",
       "prescriptionValidityDays",
     ];
@@ -273,7 +275,7 @@ export const getStaffForAssign = async (req, res) => {
       // prescriptionValidityDays travels with the doctor so a blank prescription
       // printed straight off a visit can show the right validity in the footer
       // without a second round trip.
-      "fullName qualification specialist ipdCharge opdCharge prescriptionValidityDays"
+      "fullName qualification specialist ipdCharge opdCharge surgeryCharge prescriptionValidityDays"
     );
 
     return res.status(200).json({

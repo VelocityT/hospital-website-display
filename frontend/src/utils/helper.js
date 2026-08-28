@@ -76,13 +76,21 @@ export const calculateCommission = (record, type, staffData) => {
 
     const days = discharge.diff(admission, "day") || 1;
 
-    const perDay = (staffData.ipdCommission * staffData.ipdCharge) / 100;
+    // A negotiated per-visit rate (Ipd.doctorChargeOverride) replaces the
+    // doctor's normal ipdCharge for commission purposes too — it's the
+    // doctor's actual rate for THIS admission, not a discount on the
+    // patient's bill, so the commission % applies to it the same way it
+    // would to the normal rate. See pay.controller.js for the matching
+    // billing-side calculation.
+    const rate = record.doctorChargeOverride ?? staffData.ipdCharge;
+    const perDay = (staffData.ipdCommission * rate) / 100;
 
     return parseFloat((perDay * days).toFixed(2));
   }
 
   if (type === "opd") {
-    const commission = (staffData.opdCommission * staffData.opdCharge) / 100;
+    const rate = record.doctorChargeOverride ?? staffData.opdCharge;
+    const commission = (staffData.opdCommission * rate) / 100;
     return parseFloat(commission.toFixed(2));
   }
 

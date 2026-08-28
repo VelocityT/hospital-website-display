@@ -97,7 +97,13 @@ export const buildSections = (entryType, entryData) => {
       });
     }
 
-    const docRate = Number(entryData?.attendingDoctor?.ipdCharge) || 0;
+    // Negotiated rate wins over the doctor's default when one was agreed for
+    // this admission — same precedence as pay.controller.js/ChargeTable, so
+    // the printed bill always matches what was actually billed.
+    const docRate =
+      entryData?.doctorChargeOverride ??
+      Number(entryData?.attendingDoctor?.ipdCharge) ??
+      0;
     if (docRate > 0) {
       sections.push({
         key: "professional",
@@ -107,7 +113,7 @@ export const buildSections = (entryType, entryData) => {
             date: entryData?.admissionDate,
             particulars: `Consultation — ${
               entryData?.attendingDoctor?.fullName || "Attending Doctor"
-            }`,
+            }${entryData?.doctorChargeOverride != null ? " (negotiated rate)" : ""}`,
             rate: docRate,
             units: days,
             amount: docRate * days,
@@ -115,8 +121,31 @@ export const buildSections = (entryType, entryData) => {
         ],
       });
     }
+
+    // General-hospital surgery/OT charges (Ipd.surgeryCharges[]) — separate
+    // from the ophthalmology module's EyeSurgery counseling flow, which
+    // prints through the "Surgery" entryType branch below instead.
+    const surgeryLines = (entryData?.surgeryCharges || []).map((s) => ({
+      date: s.date,
+      particulars: `${s.procedureName}${
+        s.doctor?.fullName ? ` — ${s.doctor.fullName}` : ""
+      }`,
+      rate: Number(s.charge) || 0,
+      units: 1,
+      amount: Number(s.charge) || 0,
+    }));
+    if (surgeryLines.length) {
+      sections.push({
+        key: "procedure",
+        ...GROUPS.procedure,
+        lines: surgeryLines,
+      });
+    }
   } else if (entryType === "Opd") {
-    const rate = Number(entryData?.doctor?.opdCharge) || 0;
+    const rate =
+      entryData?.doctorChargeOverride ??
+      Number(entryData?.doctor?.opdCharge) ??
+      0;
     sections.push({
       key: "professional",
       ...GROUPS.professional,
@@ -125,7 +154,7 @@ export const buildSections = (entryType, entryData) => {
           date: entryData?.visitDateTime,
           particulars: `OPD Consultation — ${
             entryData?.doctor?.fullName || "Consulting Doctor"
-          }`,
+          }${entryData?.doctorChargeOverride != null ? " (negotiated rate)" : ""}`,
           rate,
           units: 1,
           amount: rate,

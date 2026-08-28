@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  addSurgeryCharge,
   dischargePatient,
   getAllIpdPatients,
   updateIpdDetails,
@@ -25,6 +26,11 @@ router.put(
   "/discharge-ipd-patient",
   roleBasedAccess(["admin", "receptionist"]),
   dischargePatient
+);
+router.post(
+  "/:ipdId/surgery-charge",
+  roleBasedAccess(["admin", "receptionist"]),
+  addSurgeryCharge
 );
 
 export default router;

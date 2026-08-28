@@ -320,6 +320,14 @@ export const dischargePatientApi = async (payload) => {
     return error.response?.data || { success: false, message: "API Error" };
   }
 };
+export const addSurgeryChargeApi = async (ipdId, payload) => {
+  try {
+    const res = await API.post(`/ipd/${ipdId}/surgery-charge`, payload);
+    return res.data;
+  } catch (error) {
+    return error.response?.data || { success: false, message: "API Error" };
+  }
+};
 export const getPatientFullDetailsApi = async ({ patientId, params }) => {
   try {
     const response = await API.get(

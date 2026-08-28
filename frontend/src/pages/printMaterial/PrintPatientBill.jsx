@@ -7,6 +7,21 @@ const PrintPatientBill = ({ bill }) => {
   const { billDetails, entryData } = bill?.data || {};
   const entryType = bill?.entryType;
   const days = calculateStayDays(entryData?.admissionDate);
+  // A negotiated per-visit rate (doctorChargeOverride) replaces the doctor's
+  // normal charge when one was agreed for this admission/visit — same
+  // precedence used everywhere else this figure is computed (pay.controller.js,
+  // ChargeTable, NasaBill). Falling back to the raw ipdCharge/opdCharge here
+  // would print the pre-negotiation amount on hospitals using this default
+  // template instead of the Nasa one.
+  const doctorRate =
+    entryData?.doctorChargeOverride ?? entryData?.attendingDoctor?.ipdCharge ?? 0;
+  const opdDoctorRate =
+    entryData?.doctorChargeOverride ?? entryData?.doctor?.opdCharge ?? 0;
+  const surgeryCharges = entryData?.surgeryCharges || [];
+  const surgeryChargesTotal = surgeryCharges.reduce(
+    (sum, s) => sum + (Number(s?.charge) || 0),
+    0
+  );
 
   return (
     <div>
@@ -53,9 +68,12 @@ const PrintPatientBill = ({ bill }) => {
             </Row>
 
             <Row className="p-2" gutter={16}>
-              <Col span={12}>Doctor Fee</Col>
+              <Col span={12}>
+                Doctor Fee
+                {entryData?.doctorChargeOverride != null && " (negotiated rate)"}
+              </Col>
               <Col span={4} className="text-right">
-                ₹{entryData?.attendingDoctor?.ipdCharge || 0} × {days}
+                ₹{doctorRate} × {days}
               </Col>
               <Col span={3} className="text-right">
                 0
@@ -64,16 +82,38 @@ const PrintPatientBill = ({ bill }) => {
                 0
               </Col>
               <Col span={2} className="text-right">
-                ₹{(entryData?.attendingDoctor?.ipdCharge || 0) * days}
+                ₹{doctorRate * days}
               </Col>
             </Row>
+
+            {surgeryCharges.map((s, i) => (
+              <Row className="p-2" key={s._id || i} gutter={16}>
+                <Col span={12}>
+                  Surgery — {s.procedureName}
+                  {s.doctor?.fullName ? ` (${s.doctor.fullName})` : ""}
+                </Col>
+                <Col span={4} className="text-right">
+                  ₹{s.charge}
+                </Col>
+                <Col span={3} className="text-right">
+                  0
+                </Col>
+                <Col span={3} className="text-right">
+                  0
+                </Col>
+                <Col span={2} className="text-right">
+                  ₹{s.charge}
+                </Col>
+              </Row>
+            ))}
 
             <Row justify="end">
               <Col>
                 <Text strong className="text-black">
                   Total: ₹
-                  {(entryData?.attendingDoctor?.ipdCharge || 0) * days +
-                    (entryData?.bed?.charge || 0) * days}
+                  {doctorRate * days +
+                    (entryData?.bed?.charge || 0) * days +
+                    surgeryChargesTotal}
                 </Text>
               </Col>
             </Row>
@@ -108,9 +148,12 @@ const PrintPatientBill = ({ bill }) => {
         ) : entryType === "Opd" ? (
           <>
             <Row className="p-2" gutter={16}>
-              <Col span={12}>Doctor Fee</Col>
+              <Col span={12}>
+                Doctor Fee
+                {entryData?.doctorChargeOverride != null && " (negotiated rate)"}
+              </Col>
               <Col span={4} className="text-right">
-                ₹{entryData?.doctor?.opdCharge || 0}
+                ₹{opdDoctorRate}
               </Col>
               <Col span={3} className="text-right">
                 0
@@ -119,14 +162,14 @@ const PrintPatientBill = ({ bill }) => {
                 0
               </Col>
               <Col span={2} className="text-right">
-                ₹{entryData?.doctor?.opdCharge || 0}
+                ₹{opdDoctorRate}
               </Col>
             </Row>
 
             <Row justify="end">
               <Col>
                 <Text strong className="text-black">
-                  Total: ₹{entryData?.doctor?.opdCharge || 0}
+                  Total: ₹{opdDoctorRate}
                 </Text>
               </Col>
             </Row>

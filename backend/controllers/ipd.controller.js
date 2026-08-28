@@ -250,6 +250,71 @@ export const updateIpdDetails = async (req, res) => {
   }
 };
 
+/**
+ * Add a surgery/OT charge line to an in-progress or already-discharged IPD
+ * admission. Deliberately NOT the ophthalmology module's EyeSurgery flow
+ * (counseling/biometry/OT board) — this is the lightweight general-hospital
+ * version: pick a doctor, name the procedure, set an amount, done. It just
+ * pushes onto Ipd.surgeryCharges[]; payPatientIpdBill and dischargePatient
+ * both already fold this array into the total the next time either runs.
+ */
+export const addSurgeryCharge = async (req, res) => {
+  try {
+    const { hospital } = req.authority;
+    const { ipdId } = req.params;
+    const { doctor, procedureName, charge, date, notes } = req.body;
+
+    if (!procedureName || !String(procedureName).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Procedure name is required.",
+      });
+    }
+
+    const chargeAmount = Number(charge);
+    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Charge must be a positive amount.",
+      });
+    }
+
+    const ipd = await Ipd.findOne({ _id: ipdId, hospital });
+    if (!ipd) {
+      return res.status(404).json({
+        success: false,
+        message: "IPD record not found",
+      });
+    }
+
+    ipd.surgeryCharges.push({
+      doctor: doctor || null,
+      procedureName: String(procedureName).trim(),
+      charge: chargeAmount,
+      date: date ? new Date(date) : new Date(),
+      notes,
+    });
+    await ipd.save();
+
+    const updatedIpd = await Ipd.findOne({ _id: ipdId, hospital }).populate(
+      "surgeryCharges.doctor",
+      "fullName"
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Surgery charge added successfully",
+      data: { ipd: updatedIpd },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add surgery charge",
+      error: error.message,
+    });
+  }
+};
+
 export const dischargePatient = async (req, res) => {
   try {
     const { hospital } = req.authority;
@@ -274,9 +339,22 @@ export const dischargePatient = async (req, res) => {
     }
 
     const daysAdmitted = Math.max(dayjs().diff(ipd.admissionDate, "day"), 1);
+    // Same formula as payPatientIpdBill in pay.controller.js — negotiated
+    // rate wins over the doctor's default, and surgery charges count toward
+    // what has to be settled before discharge. If this drifts from that
+    // formula, discharge can silently under- or over-charge: skipping the
+    // override would demand the doctor's full rate even after a lower rate
+    // was agreed, and skipping surgeryCharges would let discharge go through
+    // with an unpaid procedure still on the bill.
     const bedCharge = (ipd.bed?.charge || 0) * daysAdmitted;
-    const doctorCharge = (ipd.attendingDoctor?.ipdCharge || 0) * daysAdmitted;
-    const totalCharge = bedCharge + doctorCharge;
+    const doctorRate =
+      ipd.doctorChargeOverride ?? ipd.attendingDoctor?.ipdCharge ?? 0;
+    const doctorCharge = doctorRate * daysAdmitted;
+    const surgeryChargesTotal = (ipd.surgeryCharges || []).reduce(
+      (sum, s) => sum + (Number(s?.charge) || 0),
+      0
+    );
+    const totalCharge = bedCharge + doctorCharge + surgeryChargesTotal;
 
     const paidTotal =
       ipd.payment?.bill?.reduce((sum, bill) => sum + bill.totalCharge, 0) || 0;

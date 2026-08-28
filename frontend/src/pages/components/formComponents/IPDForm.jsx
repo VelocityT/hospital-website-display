@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Input, Select, DatePicker } from "antd";
+import { Card, Row, Col, Form, Input, InputNumber, Select, DatePicker } from "antd";
 import TextArea from "antd/es/input/TextArea";
 import dayjs from "dayjs";
+import { useSelector } from "react-redux";
 import {
   getAvailableWardsAndBedsApi,
   getStaffForAssignApi,
@@ -28,6 +29,8 @@ const IPDForm = ({ form }) => {
   const [bedOptions, setBedOptions] = useState([]);
   const params = useParams();
   const bed = useWatch("bed", form);
+  const user = useSelector((state) => state.user);
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -116,6 +119,10 @@ const IPDForm = ({ form }) => {
     form.setFieldsValue({
       doctor: doctorId,
       consultationFees: selected?.ipdCharge || undefined,
+      // A negotiated rate is tied to the doctor it was agreed with — carrying
+      // it over to a newly-picked doctor would silently apply the wrong
+      // number to someone nobody negotiated with.
+      doctorChargeOverride: undefined,
     });
   };
 
@@ -263,6 +270,30 @@ const IPDForm = ({ form }) => {
             />
           </Form.Item>
         </Col>
+        {isAdmin && (
+          <Col xs={24} md={12} lg={8}>
+            <Form.Item
+              label="Negotiated Doctor Charge (optional)"
+              name="doctorChargeOverride"
+              tooltip="Leave blank to bill this doctor's normal per-day rate for this admission. Set a value only if a lower or different rate was agreed for this specific patient — it changes both what the patient is billed for the doctor's fee and what the doctor is paid, only for this admission."
+              rules={[
+                {
+                  type: "number",
+                  min: 0,
+                  message: "Must be 0 or more",
+                  transform: (v) => (v === undefined || v === "" ? undefined : Number(v)),
+                },
+              ]}
+            >
+              <InputNumber
+                size="large"
+                min={0}
+                style={{ width: "100%" }}
+                placeholder="Default rate applies if left blank"
+              />
+            </Form.Item>
+          </Col>
+        )}
         <Col xs={24} md={12} lg={8}>
           <Form.Item
             label="Nurse"

@@ -1,8 +1,25 @@
-import { PrinterOutlined } from "@ant-design/icons";
-import { Row, Col, Typography, Divider, Button, Tag } from "antd";
+import { useEffect, useState } from "react";
+import { PlusOutlined, PrinterOutlined } from "@ant-design/icons";
+import {
+  Row,
+  Col,
+  Typography,
+  Divider,
+  Button,
+  Tag,
+  Modal,
+  Form,
+  Select,
+  InputNumber,
+  Input,
+  DatePicker,
+} from "antd";
 import dayjs from "dayjs";
+import toast from "react-hot-toast";
+import { useSelector } from "react-redux";
 import { handlePatientBillPrint } from "../../../utils/printDataHelper";
 import { calculateStayDays, formatDateTime } from "../../../utils/helper";
+import { addSurgeryChargeApi, getStaffForAssignApi } from "../../../services/apis";
 import { Link } from "react-router-dom";
 const { Text } = Typography;
 
@@ -11,7 +28,50 @@ export const IpdChargeTable = ({
   patient,
   setSelectedEntry,
   print,
+  onRefresh,
 }) => {
+  const user = useSelector((state) => state.user);
+  const canAddSurgeryCharge = ["admin", "receptionist"].includes(user?.role);
+
+  // One modal + one doctor list shared across every IPD row in this table —
+  // only one admission can be getting a new surgery charge at a time, so a
+  // form instance per row would just be wasted state.
+  const [surgeryModalIpd, setSurgeryModalIpd] = useState(null);
+  const [surgeryDoctors, setSurgeryDoctors] = useState([]);
+  const [surgerySubmitting, setSurgerySubmitting] = useState(false);
+  const [surgeryForm] = Form.useForm();
+
+  useEffect(() => {
+    if (!canAddSurgeryCharge) return;
+    getStaffForAssignApi("doctor").then((res) => {
+      if (Array.isArray(res?.data)) setSurgeryDoctors(res.data);
+    });
+  }, [canAddSurgeryCharge]);
+
+  const handleAddSurgeryCharge = async () => {
+    try {
+      const values = await surgeryForm.validateFields();
+      setSurgerySubmitting(true);
+      const res = await addSurgeryChargeApi(surgeryModalIpd._id, {
+        ...values,
+        date: values.date ? values.date.toISOString() : undefined,
+      });
+      setSurgerySubmitting(false);
+      if (!res?.success) {
+        toast.error(res?.message || "Failed to add surgery charge");
+        return;
+      }
+      toast.success("Surgery charge added");
+      setSurgeryModalIpd(null);
+      surgeryForm.resetFields();
+      await onRefresh?.();
+    } catch (err) {
+      setSurgerySubmitting(false);
+      if (err?.errorFields?.length) return;
+      toast.error(err.message || "Failed to add surgery charge");
+    }
+  };
+
   return (
     <div className="space-y-4 print:text-black">
       <Row
@@ -36,9 +96,19 @@ export const IpdChargeTable = ({
 
         const days = calculateStayDays(admissionDate, dischargeDate);
 
+        // Mirrors payPatientIpdBill/dischargePatient on the backend exactly:
+        // negotiated rate wins when set for this admission, surgery charges
+        // add on top. If this drifts from those, the on-screen "To be paid"
+        // goes stale the moment either one changes — see pay.controller.js.
+        const doctorRate = ipd.doctorChargeOverride ?? ipd.attendingDoctor?.ipdCharge ?? 0;
         const bedCharge = (ipd.bed?.charge || 0) * days;
-        const doctorCharge = (ipd.attendingDoctor?.ipdCharge || 0) * days;
-        let total = bedCharge + doctorCharge;
+        const doctorCharge = doctorRate * days;
+        const surgeryCharges = ipd.surgeryCharges || [];
+        const surgeryChargesTotal = surgeryCharges.reduce(
+          (sum, s) => sum + (Number(s?.charge) || 0),
+          0
+        );
+        let total = bedCharge + doctorCharge + surgeryChargesTotal;
         const paidBillSum =
           ipd?.payment?.bill?.reduce(
             (sum, bill) => sum + (+bill?.totalCharge || 0),
@@ -86,6 +156,20 @@ export const IpdChargeTable = ({
                   )}
                   {!print && (
                     <>
+                      {canAddSurgeryCharge && (
+                        <Button
+                          size="small"
+                          className="mr-2 print:hidden"
+                          icon={<PlusOutlined />}
+                          onClick={() => {
+                            surgeryForm.resetFields();
+                            surgeryForm.setFieldsValue({ date: dayjs() });
+                            setSurgeryModalIpd(ipd);
+                          }}
+                        >
+                          Surgery Charge
+                        </Button>
+                      )}
                       {/* Combined receipt — total paid across every
                           instalment on this admission and what's still due.
                           Distinct from the printer icon on each instalment
@@ -143,11 +227,26 @@ export const IpdChargeTable = ({
               amount={bedCharge}
             />
             <ChargeRow
-              label="Doctor Fee"
-              rate={ipd.attendingDoctor?.ipdCharge || 0}
+              label={
+                ipd.doctorChargeOverride != null
+                  ? "Doctor Fee (negotiated rate)"
+                  : "Doctor Fee"
+              }
+              rate={doctorRate}
               days={days}
               amount={doctorCharge}
             />
+            {surgeryCharges.map((s, i) => (
+              <ChargeRow
+                key={s._id || i}
+                label={`Surgery — ${s.procedureName}${
+                  s.doctor?.fullName ? ` (${s.doctor.fullName})` : ""
+                }`}
+                rate={s.charge}
+                days={1}
+                amount={s.charge}
+              />
+            ))}
 
             <Row justify="end">
               <Text strong className={`${print && "text-black"}`}>
@@ -179,6 +278,69 @@ export const IpdChargeTable = ({
           </div>
         );
       })}
+
+      {canAddSurgeryCharge && (
+        <Modal
+          title={`Add Surgery Charge — IPD ${surgeryModalIpd?.ipdNumber || ""}`}
+          open={!!surgeryModalIpd}
+          onCancel={() => !surgerySubmitting && setSurgeryModalIpd(null)}
+          onOk={handleAddSurgeryCharge}
+          okText="Add Charge"
+          confirmLoading={surgerySubmitting}
+          destroyOnClose
+        >
+          <Form form={surgeryForm} layout="vertical">
+            <Form.Item
+              label="Doctor"
+              name="doctor"
+              rules={[{ required: true, message: "Select the operating doctor" }]}
+            >
+              <Select
+                placeholder="Select doctor"
+                options={surgeryDoctors.map((d) => ({
+                  label: d.fullName,
+                  value: d._id,
+                }))}
+                onChange={(doctorId) => {
+                  const selected = surgeryDoctors.find((d) => d._id === doctorId);
+                  if (selected?.surgeryCharge != null) {
+                    surgeryForm.setFieldsValue({ charge: selected.surgeryCharge });
+                  }
+                }}
+              />
+            </Form.Item>
+            <Form.Item
+              label="Procedure Name"
+              name="procedureName"
+              rules={[{ required: true, message: "Enter the procedure name" }]}
+            >
+              <Input placeholder="e.g. Appendectomy" />
+            </Form.Item>
+            <Form.Item
+              label="Charge"
+              name="charge"
+              tooltip="Pre-filled from the selected doctor's default surgery charge, if set — edit it if this procedure was agreed at a different amount."
+              rules={[
+                { required: true, message: "Enter the charge amount" },
+                {
+                  validator: (_, value) =>
+                    value > 0
+                      ? Promise.resolve()
+                      : Promise.reject(new Error("Must be greater than 0")),
+                },
+              ]}
+            >
+              <InputNumber min={0} className="w-full" placeholder="e.g. 8000" />
+            </Form.Item>
+            <Form.Item label="Date" name="date">
+              <DatePicker className="w-full" format="DD/MM/YYYY" />
+            </Form.Item>
+            <Form.Item label="Notes (optional)" name="notes">
+              <Input.TextArea rows={2} placeholder="Any notes for this charge" />
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -101,8 +101,17 @@ function PatientDetailsPreview({ open, onClose, patient }) {
             <Descriptions.Item label="Doctor">
               {patient.ipdDetails.attendingDoctor?.fullName || "-"}
             </Descriptions.Item>
-            <Descriptions.Item label="Doctor Charge">
-              ₹{patient.ipdDetails.attendingDoctor?.ipdCharge || 0}
+            <Descriptions.Item
+              label={
+                patient.ipdDetails.doctorChargeOverride != null
+                  ? "Doctor Charge (negotiated)"
+                  : "Doctor Charge"
+              }
+            >
+              ₹
+              {patient.ipdDetails.doctorChargeOverride ??
+                patient.ipdDetails.attendingDoctor?.ipdCharge ??
+                0}
             </Descriptions.Item>
             <Descriptions.Item label="Nurse">
               {patient.ipdDetails.attendingNurse?.fullName || "-"}
@@ -134,8 +143,15 @@ function PatientDetailsPreview({ open, onClose, patient }) {
             <Descriptions.Item label="Doctor">
               {patient.opdDetails?.doctor?.fullName}
             </Descriptions.Item>
-            <Descriptions.Item label="Consultation Fees">
-              {patient.opdDetails?.doctor?.opdCharge}
+            <Descriptions.Item
+              label={
+                patient.opdDetails?.doctorChargeOverride != null
+                  ? "Consultation Fees (negotiated)"
+                  : "Consultation Fees"
+              }
+            >
+              {patient.opdDetails?.doctorChargeOverride ??
+                patient.opdDetails?.doctor?.opdCharge}
             </Descriptions.Item>
             <Descriptions.Item label="Symptoms">
               {(patient?.opdDetails?.symptoms?.symptomNames || []).join(", ")}

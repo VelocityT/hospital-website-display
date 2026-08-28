@@ -1,6 +1,6 @@
 //its component
 import { useEffect, useState } from "react";
-import { Table, Button, Input, Modal } from "antd";
+import { Table, Button, Input, Modal, Tag } from "antd";
 import { Link } from "react-router-dom";
 import { getDoctorOpdsApi, payDoctorApi } from "../../services/apis";
 import { useSelector } from "react-redux";
@@ -132,15 +132,31 @@ const DoctorOpds = ({ doctor }) => {
             title: "OPD Charge",
             dataIndex: "opdCharge",
             key: "opdCharge",
-            render: () => <>{doctor?.opdCharge}</>,
+            render: (_, record) => {
+              const rate = record?.doctorChargeOverride ?? doctor?.opdCharge;
+              return (
+                <>
+                  {rate}
+                  {record?.doctorChargeOverride != null && (
+                    <Tag color="blue" className="ml-2">
+                      Negotiated
+                    </Tag>
+                  )}
+                </>
+              );
+            },
           },
           {
             title: "Commission",
             dataIndex: "opdCommission",
             key: "opdCommission",
-            render: () => {
-              const commission =
-                (doctor?.opdCommission * doctor?.opdCharge) / 100;
+            // Negotiated rate (record.doctorChargeOverride) replaces
+            // opdCharge for this visit when one was agreed — same rule as
+            // calculateCommission in utils/helper.js, which this used to
+            // duplicate independently and could drift from.
+            render: (_, record) => {
+              const rate = record?.doctorChargeOverride ?? doctor?.opdCharge;
+              const commission = (doctor?.opdCommission * rate) / 100;
               return <>{commission?.toFixed(2)} ₹</>;
             },
           },

@@ -816,6 +816,51 @@ function StaffRegistrationForm({ edit = false }) {
                           />
                         </Form.Item>
                       </Col>
+
+                      {/* Optional — not every doctor performs surgery. This is
+                          just the DEFAULT rate; an individual surgery charge
+                          line on a patient's bill can still be entered at a
+                          different amount, same as any other charge. */}
+                      <Col xs={24} md={12} lg={8}>
+                        <Form.Item
+                          name="surgeryCharge"
+                          label="Surgery Charge (default)"
+                          tooltip="Default amount pre-filled when adding a surgery charge for this doctor on a patient's bill. Leave blank if this doctor doesn't perform surgery, or if the amount always varies by procedure."
+                          rules={[{ type: "number", min: 0, message: "Must be 0 or more", transform: (v) => (v === "" || v === undefined ? undefined : Number(v)) }]}
+                        >
+                          <Input
+                            size="large"
+                            type="number"
+                            placeholder="e.g. 8000"
+                            min={0}
+                            onKeyUp={handleNumericKeyDown}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col
+                        xs={24}
+                        md={12}
+                        lg={8}
+                        style={isSalaried ? { display: "none" } : undefined}
+                      >
+                        <Form.Item
+                          name="surgeryCommission"
+                          label="Surgery Commission (%)"
+                          tooltip="Doctor's cut of the surgery charge, same as IPD/OPD commission. Leave blank if this doctor doesn't perform surgery."
+                          rules={[{ type: "number", min: 0, max: 100, message: "Must be between 0 and 100", transform: (v) => (v === "" || v === undefined ? undefined : Number(v)) }]}
+                        >
+                          <Input
+                            size="large"
+                            type="number"
+                            placeholder="e.g. 20"
+                            min={0}
+                            max={100}
+                            addonAfter="%"
+                            onKeyUp={handleNumericKeyDown}
+                          />
+                        </Form.Item>
+                      </Col>
                     </>
                   )}
                 </Row>

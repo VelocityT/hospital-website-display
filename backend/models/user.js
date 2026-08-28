@@ -64,6 +64,12 @@ const userSchema = new mongoose.Schema(
     // in the OPD/IPD `doctorPayment` array. Ignored when isSalaried is true.
     ipdCommission: { type: Number },
     opdCommission: { type: Number },
+    // Doctor's default rate/cut for performing a surgery — same pattern as
+    // ipdCharge/ipdCommission above. This is just the DEFAULT: an individual
+    // surgery charge line on a patient's IPD bill (Ipd.surgeryCharges[]) can
+    // still be entered at a different amount, same as any other charge.
+    surgeryCharge: { type: Number },
+    surgeryCommission: { type: Number },
     // Salaried doctors draw a fixed monthly amount instead of per-visit
     // commission. Their income view shows the salary; commission payouts are
     // blocked so nobody can be paid twice for the same work.
