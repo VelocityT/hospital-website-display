@@ -97,13 +97,11 @@ export const buildSections = (entryType, entryData) => {
       });
     }
 
-    // Negotiated rate wins over the doctor's default when one was agreed for
-    // this admission — same precedence as pay.controller.js/ChargeTable, so
-    // the printed bill always matches what was actually billed.
-    const docRate =
-      entryData?.doctorChargeOverride ??
-      Number(entryData?.attendingDoctor?.ipdCharge) ??
-      0;
+    // Always the doctor's standard ipdCharge. A negotiated rate
+    // (doctorChargeOverride) is a private hospital-doctor payout
+    // arrangement and must never appear on what the patient is billed or
+    // shown — see pay.controller.js for the matching billing calculation.
+    const docRate = Number(entryData?.attendingDoctor?.ipdCharge) || 0;
     if (docRate > 0) {
       sections.push({
         key: "professional",
@@ -113,7 +111,7 @@ export const buildSections = (entryType, entryData) => {
             date: entryData?.admissionDate,
             particulars: `Consultation — ${
               entryData?.attendingDoctor?.fullName || "Attending Doctor"
-            }${entryData?.doctorChargeOverride != null ? " (negotiated rate)" : ""}`,
+            }`,
             rate: docRate,
             units: days,
             amount: docRate * days,
@@ -142,10 +140,9 @@ export const buildSections = (entryType, entryData) => {
       });
     }
   } else if (entryType === "Opd") {
-    const rate =
-      entryData?.doctorChargeOverride ??
-      Number(entryData?.doctor?.opdCharge) ??
-      0;
+    // Same rule as the Ipd branch above: always the doctor's standard
+    // opdCharge, never a negotiated rate.
+    const rate = Number(entryData?.doctor?.opdCharge) || 0;
     sections.push({
       key: "professional",
       ...GROUPS.professional,
@@ -154,7 +151,7 @@ export const buildSections = (entryType, entryData) => {
           date: entryData?.visitDateTime,
           particulars: `OPD Consultation — ${
             entryData?.doctor?.fullName || "Consulting Doctor"
-          }${entryData?.doctorChargeOverride != null ? " (negotiated rate)" : ""}`,
+          }`,
           rate,
           units: 1,
           amount: rate,

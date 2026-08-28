@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Alert, Button, Form, InputNumber, Select, Row, Col, Tooltip } from "antd";
+import { Alert, Button, Form, InputNumber, Select, Row, Col } from "antd";
 import toast from "react-hot-toast";
-import { useSelector } from "react-redux";
 import {
   payPatientIpdBillApi,
   payPatientMedicineBillApi,
@@ -41,13 +40,6 @@ const PayModal = ({ data, setSelectedEntry, setPatient, onRefresh }) => {
   const [form] = Form.useForm();
   const [payingAmount, setPayingAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const user = useSelector((state) => state.user);
-  const isAdmin = user?.role === "admin";
-  // Only IPD/OPD carry a doctor rate to negotiate — Pathology/Medicine
-  // charges aren't a per-doctor fee.
-  const entryType = data?.selectedEntry?.type;
-  const canNegotiateDoctorRate =
-    isAdmin && (entryType === "IPD" || entryType === "OPD");
 
   // `selectedEntry.total` is the REMAINING balance for this entry, not the
   // original charge. If it is 0 (or negative, meaning the patient has already
@@ -68,10 +60,6 @@ const PayModal = ({ data, setSelectedEntry, setPatient, onRefresh }) => {
       tax: 0,
       discount: 0,
       paymentMethod: "Cash",
-      // Shows whatever negotiation is already on record for this admission
-      // /visit, if any — so opening Pay doesn't look like it's clearing a
-      // rate that was already agreed.
-      doctorChargeOverride: data?.selectedEntry?.doctorChargeOverride ?? undefined,
     });
     calculateFinal(due, 0, 0);
   }, [data, form, balanceDue]);
@@ -283,39 +271,14 @@ const PayModal = ({ data, setSelectedEntry, setPatient, onRefresh }) => {
               </Select>
             </Form.Item>
           </Col>
-
-          {canNegotiateDoctorRate && (
-            <Col md={8} xs={24}>
-              <Form.Item
-                label="Negotiated Doctor Rate (optional)"
-                name="doctorChargeOverride"
-                tooltip="Overrides the doctor's normal charge for this admission/visit only — doesn't touch their rate for any other patient. Leave blank to keep whatever is already in effect."
-              >
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  placeholder="Doctor's default rate applies"
-                  disabled={isSettled}
-                  addonAfter={
-                    data?.selectedEntry?.doctorChargeOverride != null ? (
-                      <Tooltip title="Clear the negotiated rate — go back to this doctor's normal charge">
-                        <span
-                          className="cursor-pointer"
-                          onClick={() =>
-                            !isSettled &&
-                            form.setFieldsValue({ doctorChargeOverride: null })
-                          }
-                        >
-                          Reset
-                        </span>
-                      </Tooltip>
-                    ) : undefined
-                  }
-                />
-              </Form.Item>
-            </Col>
-          )}
         </Row>
+        {/*
+          Deliberately no "negotiated doctor rate" field here. This screen
+          collects money FROM the patient, and the patient is always billed
+          the doctor's standard rate — a negotiated rate is a private
+          hospital-doctor payout arrangement (see Ipd.doctorChargeOverride)
+          set from the admin-only IPD intake/edit form, never from here.
+        */}
 
         <Form.Item>
           <div className="flex justify-end">

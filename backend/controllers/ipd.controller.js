@@ -4,6 +4,21 @@ import Ipd from "../models/ipd.js";
 import { addOnlyDateStage, extractArray } from "../utils/helper.js";
 import dayjs from "dayjs";
 
+// Admin-only negotiated per-admission doctor rate (Ipd.doctorChargeOverride).
+// This is what the HOSPITAL pays the doctor for this admission — it never
+// affects what the patient is billed (see pay.controller.js /
+// dischargePatient, both of which always use the doctor's standard
+// ipdCharge). Any non-admin value is silently dropped rather than rejected:
+// the edit form doesn't show this field to non-admins, so a non-admin value
+// here would only come from bypassing the UI.
+const resolveDoctorChargeOverride = (raw, role) => {
+  if (role !== "admin" || raw === undefined || raw === "" || raw === null) {
+    return null;
+  }
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
 export const getAllIpdPatients = async (req, res) => {
   try {
     const { hospital, role, _id } = req.authority;
@@ -173,7 +188,7 @@ export const getAllIpdPatients = async (req, res) => {
 
 export const updateIpdDetails = async (req, res) => {
   try {
-    const { hospital } = req.authority;
+    const { hospital, role } = req.authority;
     const { ipdId } = req.params;
 
     const existingIpd = await Ipd.findOne({ _id: ipdId, hospital }).populate(
@@ -221,6 +236,19 @@ export const updateIpdDetails = async (req, res) => {
         symptomType: extractArray(req.body.symptoms, "symptomType"),
         description: req.body.symptoms?.description || "",
       },
+      // Only ever touched for an admin. The edit form hides this field from
+      // every other role, so their submission has no way to signal "clear
+      // it" vs "never saw it" — omitting the key entirely here is what
+      // stops a routine bed-change edit by reception from silently wiping
+      // out a negotiated rate an admin set earlier.
+      ...(role === "admin"
+        ? {
+            doctorChargeOverride: resolveDoctorChargeOverride(
+              req.body.IPD?.doctorChargeOverride,
+              role
+            ),
+          }
+        : {}),
     };
 
       await Ipd.findOneAndUpdate({ _id: ipdId, hospital }, updateData, {
@@ -339,17 +367,15 @@ export const dischargePatient = async (req, res) => {
     }
 
     const daysAdmitted = Math.max(dayjs().diff(ipd.admissionDate, "day"), 1);
-    // Same formula as payPatientIpdBill in pay.controller.js — negotiated
-    // rate wins over the doctor's default, and surgery charges count toward
-    // what has to be settled before discharge. If this drifts from that
-    // formula, discharge can silently under- or over-charge: skipping the
-    // override would demand the doctor's full rate even after a lower rate
-    // was agreed, and skipping surgeryCharges would let discharge go through
-    // with an unpaid procedure still on the bill.
+    // Same formula as payPatientIpdBill in pay.controller.js — the patient is
+    // always charged the doctor's standard ipdCharge (doctorChargeOverride
+    // is a private hospital-doctor payout arrangement and never affects what
+    // the patient owes), and surgery charges count toward what has to be
+    // settled before discharge. If this drifts from that formula, discharge
+    // can silently under- or over-charge: skipping surgeryCharges would let
+    // discharge go through with an unpaid procedure still on the bill.
     const bedCharge = (ipd.bed?.charge || 0) * daysAdmitted;
-    const doctorRate =
-      ipd.doctorChargeOverride ?? ipd.attendingDoctor?.ipdCharge ?? 0;
-    const doctorCharge = doctorRate * daysAdmitted;
+    const doctorCharge = (ipd.attendingDoctor?.ipdCharge || 0) * daysAdmitted;
     const surgeryChargesTotal = (ipd.surgeryCharges || []).reduce(
       (sum, s) => sum + (Number(s?.charge) || 0),
       0

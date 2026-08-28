@@ -7,16 +7,12 @@ const PrintPatientBill = ({ bill }) => {
   const { billDetails, entryData } = bill?.data || {};
   const entryType = bill?.entryType;
   const days = calculateStayDays(entryData?.admissionDate);
-  // A negotiated per-visit rate (doctorChargeOverride) replaces the doctor's
-  // normal charge when one was agreed for this admission/visit — same
-  // precedence used everywhere else this figure is computed (pay.controller.js,
-  // ChargeTable, NasaBill). Falling back to the raw ipdCharge/opdCharge here
-  // would print the pre-negotiation amount on hospitals using this default
-  // template instead of the Nasa one.
-  const doctorRate =
-    entryData?.doctorChargeOverride ?? entryData?.attendingDoctor?.ipdCharge ?? 0;
-  const opdDoctorRate =
-    entryData?.doctorChargeOverride ?? entryData?.doctor?.opdCharge ?? 0;
+  // Always the doctor's standard ipdCharge/opdCharge. A negotiated rate
+  // (doctorChargeOverride) is a private hospital-doctor payout arrangement
+  // and must never appear on what the patient is billed or shown — see
+  // pay.controller.js for the matching billing calculation.
+  const doctorRate = entryData?.attendingDoctor?.ipdCharge || 0;
+  const opdDoctorRate = entryData?.doctor?.opdCharge || 0;
   const surgeryCharges = entryData?.surgeryCharges || [];
   const surgeryChargesTotal = surgeryCharges.reduce(
     (sum, s) => sum + (Number(s?.charge) || 0),
@@ -68,10 +64,7 @@ const PrintPatientBill = ({ bill }) => {
             </Row>
 
             <Row className="p-2" gutter={16}>
-              <Col span={12}>
-                Doctor Fee
-                {entryData?.doctorChargeOverride != null && " (negotiated rate)"}
-              </Col>
+              <Col span={12}>Doctor Fee</Col>
               <Col span={4} className="text-right">
                 ₹{doctorRate} × {days}
               </Col>
@@ -148,10 +141,7 @@ const PrintPatientBill = ({ bill }) => {
         ) : entryType === "Opd" ? (
           <>
             <Row className="p-2" gutter={16}>
-              <Col span={12}>
-                Doctor Fee
-                {entryData?.doctorChargeOverride != null && " (negotiated rate)"}
-              </Col>
+              <Col span={12}>Doctor Fee</Col>
               <Col span={4} className="text-right">
                 ₹{opdDoctorRate}
               </Col>

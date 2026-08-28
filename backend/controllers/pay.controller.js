@@ -9,7 +9,7 @@ import { calculateStayDays } from "../utils/helper.js";
 
 export const payPatientIpdBill = async (req, res) => {
   try {
-    const { hospital, role } = req.authority;
+    const { hospital } = req.authority;
     const payload = req.body;
     const tax = payload?.tax || 0;
     const discount = payload?.discount || 0;
@@ -38,34 +38,19 @@ export const payPatientIpdBill = async (req, res) => {
       });
     }
 
-    // A negotiated rate for THIS admission, if one was agreed — only admin
-    // can set it (it changes what the doctor is paid, not just what the
-    // patient owes), and only when a real value is sent. `null` explicitly
-    // clears a previous negotiation back to the doctor's normal ipdCharge;
-    // `undefined`/absent leaves whatever is already on the record untouched.
-    const wantsOverrideChange =
-      role === "admin" && Object.prototype.hasOwnProperty.call(
-        payload,
-        "doctorChargeOverride"
-      );
-    if (wantsOverrideChange) {
-      const raw = payload.doctorChargeOverride;
-      getEntry.doctorChargeOverride =
-        raw === null || raw === "" ? null : Math.max(Number(raw) || 0, 0);
-    }
-
     const admissionDate = dayjs(getEntry.admissionDate);
     const dischargeDate = dayjs(getEntry.dischargeSummary?.dischargeDate);
     const days = calculateStayDays(admissionDate, dischargeDate);
 
-    // Negotiated rate wins over the doctor's default when one is set for
-    // this admission. Falls back to the normal ipdCharge otherwise — this
-    // is the ONLY place that matters, everything downstream (bill, balance,
-    // commission) already reads doctorCharge/doctorRate from here.
-    const doctorRate =
-      getEntry.doctorChargeOverride ?? getEntry.attendingDoctor?.ipdCharge ?? 0;
+    // The patient is ALWAYS billed the doctor's standard ipdCharge —
+    // doctorChargeOverride (set via IPDForm, admin only) never touches this.
+    // That field exists purely so the hospital can pay the doctor less for
+    // this admission; it is a private arrangement between doctor and
+    // hospital and must never change what the patient owes or sees. It is
+    // read separately, only for commission math — see
+    // frontend/src/utils/helper.js calculateCommission.
     const bedCharge = (getEntry.bed?.charge || 0) * days;
-    const doctorCharge = doctorRate * days;
+    const doctorCharge = (getEntry.attendingDoctor?.ipdCharge || 0) * days;
     const surgeryChargesTotal = (getEntry.surgeryCharges || []).reduce(
       (sum, s) => sum + (Number(s?.charge) || 0),
       0
@@ -147,12 +132,6 @@ export const payPatientIpdBill = async (req, res) => {
             getEntry?.dischargeSummary?.dischargeDate
               ? "Paid"
               : "Pending",
-          // Only touched when an admin actually sent a change this call —
-          // otherwise this would silently overwrite an existing negotiated
-          // rate with null on every ordinary payment.
-          ...(wantsOverrideChange
-            ? { doctorChargeOverride: getEntry.doctorChargeOverride }
-            : {}),
         },
         $push: {
           "payment.bill": newBill._id,
@@ -181,7 +160,7 @@ export const payPatientIpdBill = async (req, res) => {
 
 export const payPatientOpdBill = async (req, res) => {
   try {
-    const { hospital, role } = req.authority;
+    const { hospital } = req.authority;
     const payload = req.body;
 
     const tax = payload?.tax || 0;
@@ -208,24 +187,14 @@ export const payPatientOpdBill = async (req, res) => {
       });
     }
 
-    // Same negotiated-rate mechanism as the IPD flow above — admin only,
-    // only touched when a value is actually sent this call.
-    const wantsOverrideChange =
-      role === "admin" && Object.prototype.hasOwnProperty.call(
-        payload,
-        "doctorChargeOverride"
-      );
-    if (wantsOverrideChange) {
-      const raw = payload.doctorChargeOverride;
-      getEntry.doctorChargeOverride =
-        raw === null || raw === "" ? null : Math.max(Number(raw) || 0, 0);
-    }
-
     const billNumber = await generateBillNumber(hospital);
 
-    const doctorRate =
-      getEntry.doctorChargeOverride ?? getEntry?.doctor?.opdCharge ?? 0;
-    const newTotalAmount = doctorRate + tax - discount;
+    // Patient is always billed the doctor's standard opdCharge — a
+    // negotiated rate (set via IPDForm/updateIpdDetails-style admin flows,
+    // OPD has no such entry point yet) never touches what's charged here,
+    // only what the doctor is paid. See the matching comment in
+    // payPatientIpdBill above.
+    const newTotalAmount = (getEntry?.doctor?.opdCharge || 0) + tax - discount;
 
     const billData = {
       billNumber,
@@ -251,9 +220,6 @@ export const payPatientOpdBill = async (req, res) => {
       {
         $set: {
           "payment.status": "Paid",
-          ...(wantsOverrideChange
-            ? { doctorChargeOverride: getEntry.doctorChargeOverride }
-            : {}),
         },
         $push: {
           "payment.bill": newBill._id,

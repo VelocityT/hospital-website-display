@@ -97,12 +97,13 @@ export const IpdChargeTable = ({
         const days = calculateStayDays(admissionDate, dischargeDate);
 
         // Mirrors payPatientIpdBill/dischargePatient on the backend exactly:
-        // negotiated rate wins when set for this admission, surgery charges
-        // add on top. If this drifts from those, the on-screen "To be paid"
-        // goes stale the moment either one changes — see pay.controller.js.
-        const doctorRate = ipd.doctorChargeOverride ?? ipd.attendingDoctor?.ipdCharge ?? 0;
+        // patient is always billed the doctor's STANDARD ipdCharge — a
+        // negotiated rate never appears here, this is what the patient
+        // actually owes and sees. Surgery charges add on top. If this drifts
+        // from those two backend functions, the on-screen "To be paid" goes
+        // stale — see pay.controller.js.
         const bedCharge = (ipd.bed?.charge || 0) * days;
-        const doctorCharge = doctorRate * days;
+        const doctorCharge = (ipd.attendingDoctor?.ipdCharge || 0) * days;
         const surgeryCharges = ipd.surgeryCharges || [];
         const surgeryChargesTotal = surgeryCharges.reduce(
           (sum, s) => sum + (Number(s?.charge) || 0),
@@ -227,12 +228,8 @@ export const IpdChargeTable = ({
               amount={bedCharge}
             />
             <ChargeRow
-              label={
-                ipd.doctorChargeOverride != null
-                  ? "Doctor Fee (negotiated rate)"
-                  : "Doctor Fee"
-              }
-              rate={doctorRate}
+              label="Doctor Fee"
+              rate={ipd.attendingDoctor?.ipdCharge || 0}
               days={days}
               amount={doctorCharge}
             />

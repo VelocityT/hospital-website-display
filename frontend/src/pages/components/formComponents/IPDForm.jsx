@@ -273,9 +273,10 @@ const IPDForm = ({ form }) => {
         {isAdmin && (
           <Col xs={24} md={12} lg={8}>
             <Form.Item
-              label="Negotiated Doctor Charge (optional)"
+              label="Doctor Payout Rate — internal (optional)"
               name="doctorChargeOverride"
-              tooltip="Leave blank to bill this doctor's normal per-day rate for this admission. Set a value only if a lower or different rate was agreed for this specific patient — it changes both what the patient is billed for the doctor's fee and what the doctor is paid, only for this admission."
+              tooltip="Does NOT change what the patient is billed — the patient is always charged Consultation Fees above. This only changes what the HOSPITAL pays this doctor for this admission, if a different rate was privately agreed with them. Leave blank to pay the doctor their normal per-day rate."
+              extra="Patient billing is unaffected — this is only what the hospital pays the doctor."
               rules={[
                 {
                   type: "number",
@@ -289,7 +290,7 @@ const IPDForm = ({ form }) => {
                 size="large"
                 min={0}
                 style={{ width: "100%" }}
-                placeholder="Default rate applies if left blank"
+                placeholder="Doctor's normal rate applies if left blank"
               />
             </Form.Item>
           </Col>

@@ -130,6 +130,10 @@ function PatientRegistrationPage({ edit }) {
               doctor: patient.ipdDetails.attendingDoctor?._id,
               nurse: patient.ipdDetails.attendingNurse?._id,
               ipdCharge: patient.ipdDetails.attendingDoctor?.ipdCharge,
+              // Prefill whatever negotiated rate is already on record, so
+              // re-saving this form (e.g. just to change the bed) doesn't
+              // wipe an existing negotiation back to blank.
+              doctorChargeOverride: patient.ipdDetails.doctorChargeOverride,
             }),
 
             ...(!!patient?.opdDetails?.opdNumber && {
