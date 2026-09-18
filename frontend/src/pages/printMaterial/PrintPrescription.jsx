@@ -8,7 +8,7 @@ const PrintPrescription = () => {
   const payload = JSON.parse(localStorage.getItem("printPayload") || "{}");
   if (!payload || payload.type !== "prescription") return null;
   const { record = {}, patient = {} } = payload.data || {};
-  const { medicines = [], labTests = [], note = "" } = record;
+  const { medicines = [], labTests = [], note = "", handwrittenImage = null } = record;
   const { onlyMedicine = false, ...patientData } = patient;
 
   if (!patientData) return null;
@@ -70,7 +70,26 @@ const PrintPrescription = () => {
         ))}
       </div>
 
-      {onlyMedicine ? (
+      {handwrittenImage ? (
+        <>
+          <h2 className="text-xl font-bold mb-4 text-center">Prescription</h2>
+          <img
+            src={handwrittenImage}
+            alt="Handwritten prescription"
+            className="w-full print:w-full"
+            style={{ maxWidth: "100%", border: "1px solid #e5e7eb" }}
+          />
+          {note && (
+            <>
+              <hr className="my-4 border border-gray-300 print:border-black" />
+              <div>
+                <span className="font-semibold">Doctor's Note:</span>
+                <div className="mt-1 whitespace-pre-line text-sm">{note}</div>
+              </div>
+            </>
+          )}
+        </>
+      ) : onlyMedicine ? (
         <>
           <h2 className="text-xl font-bold mb-4 text-center">Medicines</h2>
           <table className="w-full border border-gray-400 text-sm print:text-xs">

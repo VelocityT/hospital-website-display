@@ -30,7 +30,11 @@ const swaggerDocs = JSON.parse(
 );
 
 app.use(helmet());
-app.use(express.json());
+// Default express.json() limit is 100kb — too small for a handwritten
+// prescription (canvas ink captured as a base64 PNG easily runs a few
+// hundred KB to a couple MB). Raised for the whole app rather than one
+// route, since it is a body-parser-level setting, not a per-route one.
+app.use(express.json({ limit: "8mb" }));
 
 const allowedOrigins = [
   "http://localhost:3000",

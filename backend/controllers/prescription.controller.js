@@ -57,7 +57,26 @@ export const createPrescription = async (req, res) => {
       note,
       edit,
       prescriptionId,
+      // Handwritten mode: a base64 PNG data URL of ink drawn on a canvas pad,
+      // in place of picking medicines from the structured fields. See the
+      // schema comment on Prescription.handwrittenImage.
+      handwrittenImage,
     } = req.body;
+
+    // A prescription has to carry SOMETHING — either typed items or a
+    // handwritten drawing. The frontend already blocks an empty submit for
+    // the typed flow, but that check lives client-side only; enforce it here
+    // too so a direct API call can't create an empty clinical record.
+    const hasTypedContent =
+      (medicines && medicines.length > 0) ||
+      (pathologyTests && pathologyTests.length > 0);
+    const hasHandwritten = Boolean(handwrittenImage);
+    if (!edit && !hasTypedContent && !hasHandwritten) {
+      return res.status(400).json({
+        success: false,
+        message: "Add at least one medicine/lab test, or write the prescription by hand",
+      });
+    }
 
     // `createdBy` is deliberately NOT read from the body. This is a clinical
     // record — the author comes from the authenticated token, otherwise a
@@ -94,6 +113,12 @@ export const createPrescription = async (req, res) => {
       existingPrescription.medicines = medicines;
       existingPrescription.labTests = labTests;
       existingPrescription.note = note;
+      // Only touch the drawing if this edit actually sent one — an edit made
+      // through the typed-mode form has no `handwrittenImage` key at all
+      // (undefined), and must not silently wipe out a previously saved one.
+      if (handwrittenImage !== undefined) {
+        existingPrescription.handwrittenImage = handwrittenImage || null;
+      }
 
       // Backfill the doctor on records created before this field existed,
       // so older prescriptions start printing a doctor name too.
@@ -137,6 +162,7 @@ export const createPrescription = async (req, res) => {
       note,
       createdBy: userId,
       doctor,
+      handwrittenImage: handwrittenImage || null,
     });
 
     await Patient.findByIdAndUpdate(patient, {

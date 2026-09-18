@@ -12,7 +12,9 @@ import {
   Button,
   AutoComplete,
   Spin,
+  Segmented,
 } from "antd";
+import HandwrittenPad from "../components/HandwrittenPad";
 import {
   medicineCategories,
   doseIntervals,
@@ -39,6 +41,13 @@ const Prescription = ({ edit }) => {
   const [medicinesList, setMedicinesList] = useState([]);
   const [selectedPathology, setSelectedPathology] = useState([]);
   const [note, setNote] = useState("");
+  // "type": structured medicines/lab-tests form (existing flow).
+  // "write": doctor draws the Rx by hand on a touch/stylus pad instead.
+  // Mutually exclusive in the UI so a doctor doesn't half-fill both and
+  // wonder which one actually printed — see PrintPrescription.jsx, which
+  // treats a saved handwrittenImage as the primary content when present.
+  const [mode, setMode] = useState("type");
+  const [handwrittenImage, setHandwrittenImage] = useState(null);
   const [autoCategory, setAutoCategory] = useState(null);
   const [searchTermMedicine, setSearchTermMedicine] = useState("");
   const [searchTermPathology, setSearchTermPathology] = useState("");
@@ -76,6 +85,10 @@ const Prescription = ({ edit }) => {
           }));
           setSelectedPathology(labTests);
           setNote(prescription.note || "");
+          if (prescription.handwrittenImage) {
+            setMode("write");
+            setHandwrittenImage(prescription.handwrittenImage);
+          }
           if (prescription.medicines?.[0]) {
             form.setFieldsValue({
               medicine: prescription.medicines[0].medicine,
@@ -216,6 +229,7 @@ const Prescription = ({ edit }) => {
       medicines: medicinesList,
       labTests: selectedPathology,
       note,
+      handwrittenImage: mode === "write" ? handwrittenImage : null,
     };
 
     const success = await onFinish();
@@ -228,7 +242,12 @@ const Prescription = ({ edit }) => {
 
   const onFinish = async () => {
     try {
-      if (medicinesList.length <= 0 && selectedPathology.length <= 0) {
+      if (mode === "write") {
+        if (!handwrittenImage) {
+          toast.error("Please write the prescription before saving");
+          return;
+        }
+      } else if (medicinesList.length <= 0 && selectedPathology.length <= 0) {
         toast.error("Please add at least one medicine or Lab test");
         return;
       }
@@ -240,9 +259,10 @@ const Prescription = ({ edit }) => {
         ipd: patientRecord?.ipdNumber || null,
         opd: patientRecord?.opdNumber || null,
         createdBy: user?._id,
-        medicines: medicinesList,
-        pathologyTests: selectedPathology,
+        medicines: mode === "write" ? [] : medicinesList,
+        pathologyTests: mode === "write" ? [] : selectedPathology,
         note: note,
+        handwrittenImage: mode === "write" ? handwrittenImage : null,
       };
 
       const response = await createPrescriptionApi(finalData);
@@ -254,6 +274,8 @@ const Prescription = ({ edit }) => {
         setMedicinesList([]);
         setSelectedPathology([]);
         setNote("");
+        setHandwrittenImage(null);
+        setMode("type");
 
         navigate(-1);
       } else {
@@ -323,7 +345,33 @@ const Prescription = ({ edit }) => {
       </Card>
 
       <Card className="m-4" title="Add Medicine & Tests">
+        <Segmented
+          className="mb-4"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { label: "Type Prescription", value: "type" },
+            { label: "Write by Hand", value: "write" },
+          ]}
+        />
+
         <Form form={form} layout="vertical" onFinish={onFinish}>
+        {mode === "write" ? (
+          <div className="mb-4">
+            <HandwrittenPad value={handwrittenImage} onChange={setHandwrittenImage} />
+            <div className="mt-4">
+              <Form.Item label="Doctor's Note (optional, typed)">
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Anything you'd rather type than write — optional"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </Form.Item>
+            </div>
+          </div>
+        ) : (
+        <>
           <Divider orientation="left">Medicines</Divider>
           <Row gutter={16}>
             <Col xs={24} md={6}>
@@ -521,6 +569,8 @@ const Prescription = ({ edit }) => {
               </Form.Item>
             </Col>
           </Row>
+        </>
+        )}
         </Form>
 
         <Row gutter={16} justify="end" style={{ marginTop: 32 }}>

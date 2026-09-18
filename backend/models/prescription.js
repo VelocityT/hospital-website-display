@@ -51,6 +51,18 @@ const prescriptionSchema = new mongoose.Schema(
       ref: "User",
     },
     note: String,
+    // Handwritten mode: the doctor draws the Rx on a touchscreen/stylus pad
+    // instead of picking medicines from the structured fields below. Stored
+    // as a base64 PNG data URL so it can be dropped straight into an <img>
+    // on print with no separate file storage. Optional — a prescription is
+    // either typed (medicines/labTests) or handwritten (this field), and the
+    // two are allowed to coexist if a doctor adds typed items alongside a
+    // handwritten note, but the print view treats handwrittenImage as the
+    // primary content when present (see PrintPrescription.jsx).
+    handwrittenImage: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );
