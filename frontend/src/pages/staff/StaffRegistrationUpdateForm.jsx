@@ -771,7 +771,7 @@ function StaffRegistrationForm({ edit = false }) {
                       >
                         <Form.Item
                           name="ipdCommission"
-                          label="IPD Commission (₹ per day)"
+                          label="IPD Commission (₹)"
                           rules={
                             isSalaried
                               ? []
@@ -797,7 +797,7 @@ function StaffRegistrationForm({ edit = false }) {
                       >
                         <Form.Item
                           name="opdCommission"
-                          label="OPD Commission (₹ per visit)"
+                          label="OPD Commission (₹)"
                           rules={
                             isSalaried
                               ? []
