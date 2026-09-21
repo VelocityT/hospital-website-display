@@ -155,8 +155,12 @@ const DoctorOpds = ({ doctor }) => {
             // calculateCommission in utils/helper.js, which this used to
             // duplicate independently and could drift from.
             render: (_, record) => {
-              const rate = record?.doctorChargeOverride ?? doctor?.opdCharge;
-              const commission = (doctor?.opdCommission * rate) / 100;
+              // Commission is a flat ₹ figure, not a % of opdCharge. A
+              // negotiated override (record.doctorChargeOverride) replaces
+              // it directly for this visit when one was agreed — flagged
+              // already on the OPD Charge column above, so not repeated here.
+              const commission =
+                record?.doctorChargeOverride ?? doctor?.opdCommission;
               return <>{commission?.toFixed(2)} ₹</>;
             },
           },

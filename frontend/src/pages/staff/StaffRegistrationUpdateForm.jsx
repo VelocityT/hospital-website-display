@@ -771,20 +771,19 @@ function StaffRegistrationForm({ edit = false }) {
                       >
                         <Form.Item
                           name="ipdCommission"
-                          label="IPD Commission (%)"
+                          label="IPD Commission (₹ per day)"
                           rules={
                             isSalaried
                               ? []
-                              : [requiredAllowingZero("IPD Commission", 100)]
+                              : [requiredAllowingZero("IPD Commission")]
                           }
                         >
                           <Input
                             size="large"
                             type="number"
-                            placeholder="e.g. 20"
+                            placeholder="e.g. 200"
                             min={0}
-                            max={100}
-                            addonAfter="%"
+                            addonAfter="₹"
                             onKeyUp={handleNumericKeyDown}
                           />
                         </Form.Item>
@@ -798,20 +797,19 @@ function StaffRegistrationForm({ edit = false }) {
                       >
                         <Form.Item
                           name="opdCommission"
-                          label="OPD Commission (%)"
+                          label="OPD Commission (₹ per visit)"
                           rules={
                             isSalaried
                               ? []
-                              : [requiredAllowingZero("OPD Commission", 100)]
+                              : [requiredAllowingZero("OPD Commission")]
                           }
                         >
                           <Input
                             size="large"
                             type="number"
-                            placeholder="e.g. 15"
+                            placeholder="e.g. 100"
                             min={0}
-                            max={100}
-                            addonAfter="%"
+                            addonAfter="₹"
                             onKeyUp={handleNumericKeyDown}
                           />
                         </Form.Item>

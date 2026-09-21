@@ -296,11 +296,7 @@ const IPDForm = ({ form }) => {
           </Col>
         )}
         <Col xs={24} md={12} lg={8}>
-          <Form.Item
-            label="Nurse"
-            name="nurse"
-            rules={[{ required: true, message: "Please select nurse" }]}
-          >
+          <Form.Item label="Nurse" name="nurse">
             <Select
               size="large"
               placeholder="Assign Nurse"
